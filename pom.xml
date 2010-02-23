@@ -66,6 +66,14 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>1.6</version>
+                <!-- FIXME: provided by Mifos. But note that the version
+                     mentioned here must match that in the Mifos parent POM. -->
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest-all</artifactId>
                 <version>1.1</version>

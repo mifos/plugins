@@ -9,6 +9,7 @@
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/test-classes" path="AudiBankXlsLoanPaymentImporter/src/main/resources"/>
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/classes" path="AudiBankXlsLoanPaymentImporter/src/main/java"/>
 	<classpathentry kind="src" path="AudiBankImporterCommon/src/main/java"/>
+	<classpathentry kind="src" output="AudiBankImporterCommon/target/test-classes" path="AudiBankImporterCommon/src/test/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.maven.ide.eclipse.MAVEN2_CLASSPATH_CONTAINER">
 		<accessrules>

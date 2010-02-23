@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2009 Grameen Foundation USA
+ * Copyright (c) 2005-2010 Grameen Foundation USA
  * All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
@@ -40,17 +39,14 @@ import org.joda.time.LocalDate;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
 import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
-import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.framework.util.UnicodeUtil;
 import org.mifos.spi.ParseResultDto;
-import org.mifos.spi.TransactionImport;
 
-public class AudiBankTsvImporter extends TransactionImport {
+public class AudiBankTsvImporter extends AudiBankImporter {
     /**
-     * {@link DateFormat} is not thread safe: use an instance variable.
+     * {@link DateFormat} is not thread safe, that's why this is an instance variable.
      */
     final DateFormat dateFormat;
-    private PaymentTypeDto paymentTypeDto = null;
 
     static final String audiDateFormatString = "yyyy/MM/dd";
 
@@ -64,17 +60,7 @@ public class AudiBankTsvImporter extends TransactionImport {
         return "Audi Bank (tab-delimited)";
     }
 
-    static final int TRANS_DATE = 0, SERIAL = 1, VALUE_DATE = 2, REFERENCE = 3, DEBIT_OR_CREDIT = 4, AMOUNT = 5,
-            BALANCE = 6, DESCRIPTION = 7;
     static final Pattern serialPattern = Pattern.compile("^[0-9]+$");
-
-    public PaymentTypeDto getPaymentTypeDto() {
-        return this.paymentTypeDto;
-    }
-
-    public void setPaymentTypeDto(PaymentTypeDto paymentTypeDto) {
-        this.paymentTypeDto = paymentTypeDto;
-    }
 
     @Override
     public ParseResultDto parse(final InputStream rawInput) {
@@ -233,75 +219,4 @@ public class AudiBankTsvImporter extends TransactionImport {
         return new ParseResultDto(errorsList, pmts);
     }
 
-    private static final int groupLoanExternalIdLength = 8;
-
-    private boolean accountIdIsAnExternalId(String accountId) {
-        return accountId.length() <= groupLoanExternalIdLength;
-    }
-
-    @Override
-    public void store(InputStream input) throws Exception {
-        getAccountService().makePayments(parse(input).getSuccessfullyParsedRows());
-    }
-
-    private static final Pattern descriptionPatternForExternalId = Pattern
-            .compile("^PMTMAJ \\w([AZC])([0-9]{5})[0-9 ]{3} ");
-    private static final Pattern descriptionPatternForGlobalAccountNumber = Pattern
-            .compile("^PMTMAJ \\w[AZC]([0-9]{15}) ");
-
-    /**
-     * If the second letter in the "account code" (the two letters following "PMTMAJ") is "Z" it is a group loan, "A" is
-     * an individual loan, "C" is Lebanese pounds. So, if the second letter is "A" the plugin should continue working as
-     * is. If the second letter is "Z" it should prepend "GL " to the external_id before looking up and trying to apply
-     * the payment to that account.
-     */
-    protected String getAccountId(String stringWithEmbeddedId) {
-        final Matcher matcherExternalId = descriptionPatternForExternalId.matcher(stringWithEmbeddedId);
-
-        if (matcherExternalId.find()) {
-            if (matcherExternalId.group(1).equals("Z")) {
-                // group loan
-                return "GL " + matcherExternalId.group(2);
-            } else {
-                return matcherExternalId.group(2);
-            }
-        }
-
-        // if we don't find an external id of any kind then look for a global
-        // account number
-        final Matcher matcherGlobalAccountNum = descriptionPatternForGlobalAccountNumber.matcher(stringWithEmbeddedId);
-
-        if (matcherGlobalAccountNum.find()) {
-            return matcherGlobalAccountNum.group(1);
-        } else {
-            return "";
-        }
-    }
-
-    private PaymentTypeDto findPaymentType(String paymentTypeName) throws Exception {
-        PaymentTypeDto p = null;
-        List<PaymentTypeDto> supportedPaymentTypes = getAccountService().getLoanPaymentTypes();
-        for (PaymentTypeDto t : supportedPaymentTypes) {
-            if (t.getName().contains(paymentTypeName)) {
-                p = t;
-            }
-        }
-        return p;
-    }
-
-    /**
-     * @param paymentAmount
-     *            amount to be added to the running total
-     * @return total so far, including passed in paymentAmount (never <code>null</code>)
-     */
-    protected BigDecimal addToRunningTotalForAccount(BigDecimal paymentAmount,
-            Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount, AccountReferenceDto account) {
-        BigDecimal currentTotal = cumulativeAmountByAccount.get(account);
-        if (null == currentTotal) {
-            currentTotal = new BigDecimal(0);
-        }
-        currentTotal = currentTotal.add(paymentAmount);
-        cumulativeAmountByAccount.put(account, currentTotal);
-        return currentTotal;
-    }
 }

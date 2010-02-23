@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2009 Grameen Foundation USA
+ * Copyright (c) 2005-2010 Grameen Foundation USA
  * All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,11 +30,8 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -156,47 +153,5 @@ public class AudiBankTsvImporterTest {
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(1));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().get(0), containsString("Serial value"));
-    }
-
-    @Test
-    public void descriptionFieldWithIgnoredTwoLetterCode() {
-        assertThat(concreteImporter.getAccountId("PMTMAJ BO00001 Joey DeChantel"), is(""));
-    }
-
-    @Test
-    public void canGetAccountIdFromLongForm() {
-        assertThat(concreteImporter.getAccountId("PMTMAJ EA41560 83  James Stephens"), is("41560"));
-    }
-
-    @Test
-    public void canParseFourDigitAccountId() {
-        assertThat(concreteImporter.getAccountId("PMTMAJ EA01561183  James Stephens"), is("01561"));
-    }
-
-    @Test
-    public void canParseGroupLoanAccountId() {
-        assertThat(concreteImporter.getAccountId("PMTMAJ EZ01561183  James Stephens"), is("GL 01561"));
-    }
-
-    @Test
-    public void canParseMifosGlobalAccountNumber() {
-        assertThat(concreteImporter.getAccountId("PMTMAJ EA123456789012345  James Stephens"), is("123456789012345"));
-    }
-
-    @Test
-    public void canTrackRunningPaymentTotalByAccount() {
-        Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
-        AccountReferenceDto account = new AccountReferenceDto(21);
-        BigDecimal totalSoFarForFirstAccount = concreteImporter.addToRunningTotalForAccount(new BigDecimal("10.25"),
-                cumulativeAmountByAccount, account);
-        assertThat(totalSoFarForFirstAccount, is(new BigDecimal("10.25")));
-        totalSoFarForFirstAccount = concreteImporter.addToRunningTotalForAccount(new BigDecimal(".75"),
-                cumulativeAmountByAccount, account);
-        assertThat(totalSoFarForFirstAccount, is(new BigDecimal("11.00")));
-
-        AccountReferenceDto otherAccount = new AccountReferenceDto(22);
-        BigDecimal totalSoFarForSecondAccount = concreteImporter.addToRunningTotalForAccount(new BigDecimal(".85"),
-                cumulativeAmountByAccount, otherAccount);
-        assertThat(totalSoFarForSecondAccount, is(new BigDecimal(".85")));
     }
 }
