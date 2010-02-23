@@ -1,0 +1,26 @@
+Bank Audi sal							
+Customer : LEB.ASS.FOR DEV.- AL-MAJMOUA - (174879)							
+Activity Summary for Account No. 21117046133333902 							
+							
+Trans.Date	Serial	Value Date	Reference	D/C	Amount	Balance	Description
+2009/09/01	21b79	2009/09/01	8079603	C	120	1500.23	PMTMAJ BC00001115  Joey DeChantel          
+2009/09/01	13023	2009/09/01	8021687	C	570	1790.15	PMTMAJ BZ25719201  Joey DeChantel
+2009/09/01	18507	2009/09/01	8095736	C	184	184.9	PMTMAJ EA41560 83  James Stephens     
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
