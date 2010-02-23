@@ -5,6 +5,12 @@
     <name>Audi Bank Import Plugin (XLS)</name>
     <version>0.0.1-SNAPSHOT</version>
 
+    <parent>
+        <groupId>org.mifos</groupId>
+        <artifactId>mifos-plugins-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
     <build>
         <plugins>
             <plugin>
@@ -37,6 +43,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -60,33 +67,33 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.almajmoua</groupId>
+            <artifactId>audibank-importer-common</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>org.mifos</groupId>
             <artifactId>mifos-api</artifactId>
-            <version>0.1a-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mifos</groupId>
             <artifactId>mifos-spi</artifactId>
-            <version>0.1a-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.7</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>1.8.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-            <version>2.4</version>
             <!-- FIXME: provided by Mifos. But note that the version mentioned
             here must match that in the Mifos parent POM. -->
             <scope>provided</scope>
@@ -94,7 +101,6 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
-            <version>1.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -115,12 +121,4 @@
             </exclusions>
         </dependency>
     </dependencies>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>maven-repository.mifos.org</id>
-            <name>Mifos Maven Repository</name>
-            <url>http://maven.mifos.org/maven</url>
-        </pluginRepository>
-    </pluginRepositories>
 </project>

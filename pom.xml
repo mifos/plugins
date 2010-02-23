@@ -1,9 +1,82 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>org.mifos</groupId>
-  <artifactId>mifos-plugins-parent</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  <name>Mifos Plugins - Parent</name>
-  <description>Meta-POM for Mifos plugins</description>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.mifos</groupId>
+    <artifactId>mifos-plugins-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Mifos Plugins - Parent</name>
+    <description>Meta-POM for Mifos plugins</description>
+
+    <modules>
+        <module>AudiBankImporterCommon</module>
+        <module>AudiBankTsvLoanPaymentImporter</module>
+        <module>AudiBankXlsLoanPaymentImporter</module>
+    </modules>
+
+    <!-- Only mention our repository, following "open source" guidance at
+         http://www.sonatype.com/people/2009/02/why-putting-repositories-in-your-poms-is-a-bad-idea/
+         "If you are exposing your source and want to make it easy for others
+         to build, then consider adding a repository entry to your POM..." -->
+    <repositories>
+        <repository>
+            <id>maven-repository.mifos.org</id>
+            <name>Mifos Maven Repository</name>
+            <url>http://maven.mifos.org/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>maven-repository.mifos.org</id>
+            <url>http://maven.mifos.org/nexus/content/groups/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.mifos</groupId>
+                <artifactId>mifos-api</artifactId>
+                <version>0.1a-SNAPSHOT</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mifos</groupId>
+                <artifactId>mifos-spi</artifactId>
+                <version>0.1a-SNAPSHOT</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.7</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>1.8.2</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.4</version>
+                <!-- FIXME: provided by Mifos. But note that the version
+                     mentioned here must match that in the Mifos parent POM. -->
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-all</artifactId>
+                <version>1.1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mifos</groupId>
+                <artifactId>mifos-common</artifactId>
+                <version>1.4-SNAPSHOT</version>
+                <scope>provided</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 </project>
