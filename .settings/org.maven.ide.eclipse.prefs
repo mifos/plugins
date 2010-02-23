@@ -2,8 +2,7 @@
 activeProfiles=
 eclipse.preferences.version=1
 fullBuildGoals=process-test-resources
-includeModules=false
+includeModules=true
 resolveWorkspaceProjects=false
 resourceFilterGoals=process-resources resources\:testResources
-skipCompilerPlugin=true
 version=1
