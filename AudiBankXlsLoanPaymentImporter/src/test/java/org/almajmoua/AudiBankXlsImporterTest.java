@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import java.io.FileInputStream;
@@ -78,6 +79,7 @@ public class AudiBankXlsImporterTest {
         transactionImport.setAccountService(accountService);
         transactionImport.setUserReferenceDto(userReferenceDto);
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
+        when(accountService.lookupLoanAccountReferenceFromId(anyInt())).thenReturn(account);
         when(accountService.lookupLoanAccountReferenceFromExternalId(anyString())).thenReturn(account);
         when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(
                 accountFromGlobalAccountNum);
@@ -111,7 +113,7 @@ public class AudiBankXlsImporterTest {
         String testDataFilename = this.getClass().getResource("/audi_test_mifos_id.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(2));
+        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(3));
         assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().get(1)
                 .getAccount().getAccountId(), is(idFromGlobalAccountNumber));
     }

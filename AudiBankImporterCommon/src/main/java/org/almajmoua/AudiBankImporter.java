@@ -109,7 +109,10 @@ public abstract class AudiBankImporter extends TransactionImport {
         return accountId.length() == 7;
     }
 
+    /** Group loan account external IDs start with this string. */
     private static final String GROUP_PREFIX = "GL";
+    
+    /** External IDs for accounts in Lebanese pounds start with this string. */
     private static final String LBP_PREFIX = "LL";
 
     static boolean accountIdIsAnExternalId(String accountId) {
