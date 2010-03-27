@@ -50,35 +50,43 @@ public abstract class AudiBankImporter extends TransactionImport {
         this.paymentTypeDto = paymentTypeDto;
     }
 
-    private static final Pattern descriptionPatternForExternalId = Pattern.compile("^PMTMAJ \\w([AZC])([0-9]{5})[0-9 ]{3} ");
-    private static final Pattern descriptionPatternForGlobalAccountNumber = Pattern.compile("^PMTMAJ \\w[AZC]([0-9]{15}) ");
+    private static final Pattern descriptionPatternForExternalId = Pattern
+            .compile("^PMTMAJ \\w([AZC])([0-9]{5})[0-9 ]{3} ");
+    private static final Pattern descriptionPatternForAccountId = Pattern.compile("^PMTMAJ ([0-9]{7}) ");
+    private static final Pattern descriptionPatternForGlobalAccountNumber = Pattern.compile("^PMTMAJ ([0-9]{15}) ");
 
     /**
      * If the second letter in the "account code" (the two letters following "PMTMAJ") is "Z" it is a group loan, "A" is
      * an individual loan, "C" is Lebanese pounds. So, if the second letter is "A" the plugin should continue working as
-     * is. If the second letter is "Z" it should prepend "GL " to the external_id before looking up and trying to apply
-     * the payment to that account.
+     * is. If the second letter is "Z" we should prepend "GL " to the external_id before looking up and trying to apply
+     * the payment to that account. If the second letter is "C" we should prepend "LL " to the external_id before
+     * looking up and trying to apply the payment to that account.
      */
     static String getAccountId(String stringWithEmbeddedId) {
-        final Matcher matcherExternalId = descriptionPatternForExternalId.matcher(stringWithEmbeddedId);
+        final Matcher matcherGlobalAccountNum = descriptionPatternForGlobalAccountNumber.matcher(stringWithEmbeddedId);
+        if (matcherGlobalAccountNum.find()) {
+            return matcherGlobalAccountNum.group(1);
+        }
 
+        final Matcher matcherInternalId = descriptionPatternForAccountId.matcher(stringWithEmbeddedId);
+        if (matcherInternalId.find()) {
+            return matcherInternalId.group(1);
+        }
+
+        final Matcher matcherExternalId = descriptionPatternForExternalId.matcher(stringWithEmbeddedId);
         if (matcherExternalId.find()) {
             if (matcherExternalId.group(1).equals("Z")) {
                 // group loan
-                return "GL " + matcherExternalId.group(2);
+                return GROUP_PREFIX + " " + matcherExternalId.group(2);
+            } else if (matcherExternalId.group(1).equals("C")) {
+                // loan in Lebanese pounds
+                return LBP_PREFIX + " " + matcherExternalId.group(2);
             } else {
                 return matcherExternalId.group(2);
             }
         }
 
-        // if we don't find an external id of any kind then look for a global account number
-        final Matcher matcherGlobalAccountNum = descriptionPatternForGlobalAccountNumber.matcher(stringWithEmbeddedId);
-
-        if (matcherGlobalAccountNum.find()) {
-            return matcherGlobalAccountNum.group(1);
-        } else {
-            return "";
-        }
+        return "";
     }
 
     /**
@@ -97,10 +105,15 @@ public abstract class AudiBankImporter extends TransactionImport {
         return currentTotal;
     }
 
-    static final int groupLoanExternalIdLength = 8;
+    static boolean accountIdIsAnInternalId(String accountId) {
+        return accountId.length() == 7;
+    }
+
+    private static final String GROUP_PREFIX = "GL";
+    private static final String LBP_PREFIX = "LL";
 
     static boolean accountIdIsAnExternalId(String accountId) {
-        return accountId.length() <= groupLoanExternalIdLength;
+        return accountId.length() == 5 || accountId.startsWith(GROUP_PREFIX) || accountId.startsWith(LBP_PREFIX);
     }
 
     PaymentTypeDto findPaymentType(String paymentTypeName) throws Exception {

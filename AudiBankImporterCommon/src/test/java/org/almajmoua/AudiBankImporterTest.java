@@ -46,18 +46,27 @@ public class AudiBankImporterTest {
     }
 
     @Test
-    public void canParseFourDigitAccountId() {
+    public void canParseFourDigitExternalId() {
         assertThat(AudiBankImporter.getAccountId("PMTMAJ EA01561183  James Stephens"), is("01561"));
     }
 
     @Test
-    public void canParseGroupLoanAccountId() {
+    public void canParseGroupLoanExternalId() {
         assertThat(AudiBankImporter.getAccountId("PMTMAJ EZ01561183  James Stephens"), is("GL 01561"));
+    }
+
+    public void canParseLbpLoanExternalId() {
+        assertThat(AudiBankImporter.getAccountId("PMTMAJ EC01561183  James Stephens"), is("LL 01561"));
+    }
+
+    @Test
+    public void canParseMifosAccountId() {
+        assertThat(AudiBankImporter.getAccountId("PMTMAJ 1234567  James Stephens"), is("1234567"));
     }
 
     @Test
     public void canParseMifosGlobalAccountNumber() {
-        assertThat(AudiBankImporter.getAccountId("PMTMAJ EA123456789012345  James Stephens"), is("123456789012345"));
+        assertThat(AudiBankImporter.getAccountId("PMTMAJ 123456789012345  James Stephens"), is("123456789012345"));
     }
 
     @Test

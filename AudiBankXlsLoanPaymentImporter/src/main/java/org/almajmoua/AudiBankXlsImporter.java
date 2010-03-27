@@ -181,7 +181,9 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     final AccountReferenceDto account;
 
                     try {
-                        if (accountIdIsAnExternalId(accountId)) {
+                        if (accountIdIsAnInternalId(accountId)) {
+                            account = getAccountService().lookupLoanAccountReferenceFromId(Integer.valueOf(accountId));
+                        } else if (accountIdIsAnExternalId(accountId)) {
                             account = getAccountService().lookupLoanAccountReferenceFromExternalId(accountId);
                         } else {
                             account = getAccountService().lookupLoanAccountReferenceFromGlobalAccountNumber(accountId);
@@ -242,5 +244,4 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
         return new ParseResultDto(errorsList, pmts);
     }
-
 }
