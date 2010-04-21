@@ -8,9 +8,10 @@
     <description>Meta-POM for Mifos plugins</description>
 
     <modules>
-        <module>AudiBankImporterCommon</module>
+        <module>common</module>
         <module>AudiBankTsvLoanPaymentImporter</module>
         <module>AudiBankXlsLoanPaymentImporter</module>
+        <module>MPesaXlsImporter</module>
     </modules>
 
     <!-- Only mention our repository, following "open source" guidance at

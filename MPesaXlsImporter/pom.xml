@@ -68,6 +68,11 @@
     <dependencies>
         <dependency>
             <groupId>org.mifos</groupId>
+            <artifactId>plugins-common</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mifos</groupId>
             <artifactId>mifos-api</artifactId>
             <scope>provided</scope>
         </dependency>

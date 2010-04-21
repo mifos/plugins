@@ -67,8 +67,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.almajmoua</groupId>
-            <artifactId>audibank-importer-common</artifactId>
+            <groupId>org.mifos</groupId>
+            <artifactId>plugins-common</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
