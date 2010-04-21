@@ -94,15 +94,11 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-            <!-- FIXME: provided by Mifos. But note that the version mentioned
-            here must match that in the Mifos parent POM. -->
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
-            <!-- FIXME: provided by Mifos. But note that the version
-                 mentioned here must match that in the Mifos parent POM. -->
             <scope>provided</scope>
         </dependency>
         <dependency>
