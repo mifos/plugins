@@ -50,9 +50,9 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AudiBankXlsImporterTest {
+public class MPesaXlsImporterTest {
     TransactionImport transactionImport;
-    AudiBankXlsImporter concreteImporter;
+    MPesaXlsImporter concreteImporter;
     @Mock
     AccountService accountService;
     @Mock
@@ -74,7 +74,7 @@ public class AudiBankXlsImporterTest {
      */
     @Before
     public void setUpBeforeMethod() throws Exception {
-        concreteImporter = new AudiBankXlsImporter();
+        concreteImporter = new MPesaXlsImporter();
         transactionImport = concreteImporter;
         transactionImport.setAccountService(accountService);
         transactionImport.setUserReferenceDto(userReferenceDto);
@@ -84,7 +84,7 @@ public class AudiBankXlsImporterTest {
         when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(
                 accountFromGlobalAccountNum);
         when(accountFromGlobalAccountNum.getAccountId()).thenReturn(idFromGlobalAccountNumber);
-        when(paymentTypeDto.getName()).thenReturn("Bank Audi sal");
+        when(paymentTypeDto.getName()).thenReturn("M-PESA import");
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);

@@ -40,11 +40,11 @@ import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.spi.ParseResultDto;
 
-public class AudiBankXlsImporter extends AudiBankImporter {
+public class MPesaXlsImporter extends AudiBankImporter {
 
     @Override
     public String getDisplayName() {
-        return "Audi Bank (Excel 2007)";
+        return "M-PESA (Excel 2007)";
     }
 
     @Override
