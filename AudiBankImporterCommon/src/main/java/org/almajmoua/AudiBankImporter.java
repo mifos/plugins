@@ -42,11 +42,11 @@ public abstract class AudiBankImporter extends TransactionImport {
 
     private PaymentTypeDto paymentTypeDto = null;
 
-    PaymentTypeDto getPaymentTypeDto() {
+    public PaymentTypeDto getPaymentTypeDto() {
         return this.paymentTypeDto;
     }
 
-    void setPaymentTypeDto(PaymentTypeDto paymentTypeDto) {
+    public void setPaymentTypeDto(PaymentTypeDto paymentTypeDto) {
         this.paymentTypeDto = paymentTypeDto;
     }
 
@@ -94,7 +94,7 @@ public abstract class AudiBankImporter extends TransactionImport {
      *            amount to be added to the running total
      * @return total so far, including passed in paymentAmount (never <code>null</code>)
      */
-    static BigDecimal addToRunningTotalForAccount(BigDecimal paymentAmount,
+    public static BigDecimal addToRunningTotalForAccount(BigDecimal paymentAmount,
             Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount, AccountReferenceDto account) {
         BigDecimal currentTotal = cumulativeAmountByAccount.get(account);
         if (null == currentTotal) {
@@ -119,7 +119,7 @@ public abstract class AudiBankImporter extends TransactionImport {
         return accountId.length() == 5 || accountId.startsWith(GROUP_PREFIX) || accountId.startsWith(LBP_PREFIX);
     }
 
-    PaymentTypeDto findPaymentType(String paymentTypeName) throws Exception {
+    public PaymentTypeDto findPaymentType(String paymentTypeName) throws Exception {
         PaymentTypeDto p = null;
         List<PaymentTypeDto> supportedPaymentTypes = getAccountService().getLoanPaymentTypes();
         for (PaymentTypeDto t : supportedPaymentTypes) {

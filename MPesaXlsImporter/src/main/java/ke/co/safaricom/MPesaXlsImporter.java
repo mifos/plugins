@@ -18,7 +18,7 @@
  * explanation of the license and how it is applied.
  */
 
-package org.almajmoua;
+package ke.co.safaricom;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.almajmoua.AudiBankImporter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -147,7 +148,7 @@ public class MPesaXlsImporter extends AudiBankImporter {
                     final Cell descriptionCell = row.getCell(DESCRIPTION);
                     String accountId = "";
                     if (null != descriptionCell) {
-                        accountId = getAccountId(descriptionCell.getStringCellValue());
+                        accountId = "BLAH - XXX";
                     }
 
                     if ("".equals(accountId)) {
@@ -181,13 +182,7 @@ public class MPesaXlsImporter extends AudiBankImporter {
                     final AccountReferenceDto account;
 
                     try {
-                        if (accountIdIsAnInternalId(accountId)) {
-                            account = getAccountService().lookupLoanAccountReferenceFromId(Integer.valueOf(accountId));
-                        } else if (accountIdIsAnExternalId(accountId)) {
-                            account = getAccountService().lookupLoanAccountReferenceFromExternalId(accountId);
-                        } else {
-                            account = getAccountService().lookupLoanAccountReferenceFromGlobalAccountNumber(accountId);
-                        }
+                        account = getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName("x", "y");
                     } catch (Exception e) {
                         errorsList
                                 .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());

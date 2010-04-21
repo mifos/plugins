@@ -18,7 +18,7 @@
  * explanation of the license and how it is applied.
  */
 
-package org.almajmoua;
+package ke.co.safaricom;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
@@ -84,7 +84,7 @@ public class MPesaXlsImporterTest {
         when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(
                 accountFromGlobalAccountNum);
         when(accountFromGlobalAccountNum.getAccountId()).thenReturn(idFromGlobalAccountNumber);
-        when(paymentTypeDto.getName()).thenReturn("M-PESA import");
+        when(paymentTypeDto.getName()).thenReturn("MPESA/ZAP");
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
