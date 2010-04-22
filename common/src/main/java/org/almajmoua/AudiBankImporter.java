@@ -20,35 +20,14 @@
 
 package org.almajmoua;
 
-import java.io.InputStream;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.mifos.accounts.api.AccountReferenceDto;
-import org.mifos.accounts.api.PaymentTypeDto;
-import org.mifos.spi.TransactionImport;
+import org.mifos.StandardImport;
 
-public abstract class AudiBankImporter extends TransactionImport {
+public abstract class AudiBankImporter extends StandardImport {
     static final int TRANS_DATE = 0, SERIAL = 1, VALUE_DATE = 2, REFERENCE = 3, DEBIT_OR_CREDIT = 4, AMOUNT = 5,
             BALANCE = 6, DESCRIPTION = 7, MAX_CELL_NUM = 8;
-
-    @Override
-    public void store(InputStream input) throws Exception {
-        getAccountService().makePayments(parse(input).getSuccessfullyParsedRows());
-    }
-
-    private PaymentTypeDto paymentTypeDto = null;
-
-    public PaymentTypeDto getPaymentTypeDto() {
-        return this.paymentTypeDto;
-    }
-
-    public void setPaymentTypeDto(PaymentTypeDto paymentTypeDto) {
-        this.paymentTypeDto = paymentTypeDto;
-    }
 
     private static final Pattern descriptionPatternForExternalId = Pattern
             .compile("^PMTMAJ \\w([AZC])([0-9]{5})[0-9 ]{3} ");
@@ -89,22 +68,6 @@ public abstract class AudiBankImporter extends TransactionImport {
         return "";
     }
 
-    /**
-     * @param paymentAmount
-     *            amount to be added to the running total
-     * @return total so far, including passed in paymentAmount (never <code>null</code>)
-     */
-    public static BigDecimal addToRunningTotalForAccount(BigDecimal paymentAmount,
-            Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount, AccountReferenceDto account) {
-        BigDecimal currentTotal = cumulativeAmountByAccount.get(account);
-        if (null == currentTotal) {
-            currentTotal = new BigDecimal(0);
-        }
-        currentTotal = currentTotal.add(paymentAmount);
-        cumulativeAmountByAccount.put(account, currentTotal);
-        return currentTotal;
-    }
-
     static boolean accountIdIsAnInternalId(String accountId) {
         return accountId.length() == 7;
     }
@@ -117,16 +80,5 @@ public abstract class AudiBankImporter extends TransactionImport {
 
     static boolean accountIdIsAnExternalId(String accountId) {
         return accountId.length() == 5 || accountId.startsWith(GROUP_PREFIX) || accountId.startsWith(LBP_PREFIX);
-    }
-
-    public PaymentTypeDto findPaymentType(String paymentTypeName) throws Exception {
-        PaymentTypeDto p = null;
-        List<PaymentTypeDto> supportedPaymentTypes = getAccountService().getLoanPaymentTypes();
-        for (PaymentTypeDto t : supportedPaymentTypes) {
-            if (t.getName().contains(paymentTypeName)) {
-                p = t;
-            }
-        }
-        return p;
     }
 }

@@ -21,17 +21,18 @@
 package ke.co.safaricom;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import java.io.FileInputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -58,15 +59,13 @@ public class MPesaXlsImporterTest {
     @Mock
     AccountReferenceDto account;
     @Mock
-    AccountReferenceDto accountFromGlobalAccountNum;
-    @Mock
     UserReferenceDto userReferenceDto;
     @Mock
     PaymentTypeDto paymentTypeDto;
 
     List<InvalidPaymentReason> noErrors = new ArrayList<InvalidPaymentReason>();
 
-    private final int idFromGlobalAccountNumber = 2;
+    private final int fakeMifosAccountId = 2;
 
     /**
      * Would rather use {@link BeforeClass}, but this causes Mockito to throw an exception insisting that
@@ -79,11 +78,10 @@ public class MPesaXlsImporterTest {
         transactionImport.setAccountService(accountService);
         transactionImport.setUserReferenceDto(userReferenceDto);
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
-        when(accountService.lookupLoanAccountReferenceFromId(anyInt())).thenReturn(account);
-        when(accountService.lookupLoanAccountReferenceFromExternalId(anyString())).thenReturn(account);
-        when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(
-                accountFromGlobalAccountNum);
-        when(accountFromGlobalAccountNum.getAccountId()).thenReturn(idFromGlobalAccountNumber);
+        when(
+                accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
+                        anyString())).thenReturn(account);
+        when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn("MPESA/ZAP");
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
@@ -102,27 +100,30 @@ public class MPesaXlsImporterTest {
 
     @Test
     public void successfulImport() throws Exception {
-        String testDataFilename = this.getClass().getResource("/audi_test.xls").getFile();
+        String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(3));
+        assertThat(result.getSuccessfullyParsedRows().size(), is(3));
+        for (AccountPaymentParametersDto a : result.getSuccessfullyParsedRows()) {
+            System.out.println(a.getAccount().getAccountId());
+        }
+        assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
     }
 
     @Test
-    public void successfulImportWithMifosId() throws Exception {
-        String testDataFilename = this.getClass().getResource("/audi_test_mifos_id.xls").getFile();
-        ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
-        assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(3));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().get(1)
-                .getAccount().getAccountId(), is(idFromGlobalAccountNumber));
+    public void canParseClientIdentifiers() {
+        assertThat(concreteImporter.parseClientIdentifiers("28 bl"), is(new String[] { "28", "bl" }));
     }
 
+    @Mock
+    Cell cellWithDate;
+
     @Test
-    public void missingSerialNumber() throws Exception {
-        String testDataFilename = this.getClass().getResource("/missing_serial.xls").getFile();
-        ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
-        assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(1));
-        assertThat(result.getParseErrors().toString(), result.getParseErrors().get(0), containsString("Serial value"));
+    public void canParseTextBasedDate() throws Exception {
+        String fakeDateString = "2009-10-15 14:52:51";
+        when(cellWithDate.getCellType()).thenReturn(Cell.CELL_TYPE_STRING);
+        when(cellWithDate.getStringCellValue()).thenReturn(fakeDateString);
+        Date expected = new SimpleDateFormat(MPesaXlsImporter.dateFormat).parse(fakeDateString);
+        assertThat(concreteImporter.getDate(cellWithDate), is(expected));
     }
 }

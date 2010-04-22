@@ -22,26 +22,34 @@ package ke.co.safaricom;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.almajmoua.AudiBankImporter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.joda.time.LocalDate;
+import org.mifos.StandardImport;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
 import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.spi.ParseResultDto;
 
-public class MPesaXlsImporter extends AudiBankImporter {
+public class MPesaXlsImporter extends StandardImport {
+    private static final String COMPLETED = "Completed";
+    static final int RECEIPT = 0, TRANS_DATE = 1, DETAILS = 2, STATUS = 3, WITHDRAWN = 4, PAID_IN = 5, BALANCE = 6,
+            BALANCE_CONFIRMED = 7, TRANSACTION_TYPE = 8, OTHER_PARTY_INFO = 9, TRANSACTION_PARTY_DETAILS = 10,
+            MAX_CELL_NUM = 11;
 
     @Override
     public String getDisplayName() {
@@ -53,56 +61,35 @@ public class MPesaXlsImporter extends AudiBankImporter {
         final List<String> errorsList = new ArrayList<String>();
         final List<AccountPaymentParametersDto> pmts = new ArrayList<AccountPaymentParametersDto>();
         int friendlyRowNum = 0;
+        boolean skippingRowsBeforeTransactionData = true;
         Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
 
         try {
+            setPaymentTypeDto(findPaymentType("MPESA/ZAP"));
+
             final HSSFWorkbook workbook = new HSSFWorkbook(input);
             final HSSFSheet sheet = workbook.getSheetAt(0);
 
-            Row row = sheet.getRow(0);
-            if (null == row) {
-                errorsList.add("Not enough input. Couldn't read first row.");
-            }
-
-            final Cell topLeftCell = row.getCell(0);
-            if (errorsList.isEmpty() && null == topLeftCell) {
-                errorsList.add("Not enough input. Couldn't read first cell.");
-            }
-
-            if (errorsList.isEmpty() && topLeftCell.getCellType() != Cell.CELL_TYPE_STRING) {
-                errorsList.add("First cell must be a string containing a payment type.");
-            }
-
-            String topLeftCellAsString = "";
-            if (errorsList.isEmpty()) {
-                topLeftCellAsString = topLeftCell.getStringCellValue();
-                if (StringUtils.isBlank(topLeftCellAsString)) {
-                    errorsList.add("Payment type not found in first cell.");
-                }
-            }
-
-            if (errorsList.isEmpty()) {
-                setPaymentTypeDto(findPaymentType(topLeftCellAsString));
-                if (getPaymentTypeDto() == null) {
-                    errorsList.add("No payment type found named '" + topLeftCellAsString + "'.");
-                }
-            }
-            row = null;
+            Row row = null;
 
             final Iterator<Row> rowIterator = sheet.iterator();
 
-            while (errorsList.isEmpty()) {
+            /* Ignore everything prior to transaction data */
+            while (errorsList.isEmpty() && skippingRowsBeforeTransactionData) {
                 if (!rowIterator.hasNext()) {
                     errorsList.add("No rows found with import data.");
                     break;
                 }
                 row = rowIterator.next();
-                // skip first 5 lines
-                if (row.getRowNum() >= 4) {
-                    break;
+
+                if (row.getCell(0).getStringCellValue().trim().equals("Transactions")) {
+                    skippingRowsBeforeTransactionData = false;
+                    /* skip row with column descriptions */
+                    rowIterator.next();
                 }
             }
 
+            /* Parse transaction data */
             if (errorsList.isEmpty()) {
                 row = null;
 
@@ -127,52 +114,37 @@ public class MPesaXlsImporter extends AudiBankImporter {
                         continue;
                     }
 
-                    final Cell debitOrCreditCell = row.getCell(DEBIT_OR_CREDIT);
-                    String debitOrCredit = null;
-                    if (null != debitOrCreditCell) {
-                        debitOrCredit = debitOrCreditCell.getStringCellValue().trim();
-                        if (StringUtils.isBlank(debitOrCredit)) {
-                            debitOrCredit = null;
-                        } else {
-                            if (!debitOrCredit.equalsIgnoreCase("C")) {
-                                /* not a credit: ignore */
-                                continue;
-                            }
+                    final Cell statusCell = row.getCell(STATUS);
+                    String status = null;
+                    if (null != statusCell) {
+                        status = statusCell.getStringCellValue().trim();
+
+                        if (!status.equals(COMPLETED)) {
+                            errorsList.add("Row " + friendlyRowNum + " has a status other than \"" + COMPLETED + "\".");
                         }
                     }
-                    if (null == debitOrCredit) {
-                        errorsList.add("Row " + friendlyRowNum + " is missing data: debit/credit not specified.");
+
+                    final Cell detailsCell = row.getCell(TRANSACTION_PARTY_DETAILS);
+                    String governmentId = "", loanProductShortName = "";
+                    if (null != detailsCell) {
+                        String[] result = parseClientIdentifiers(detailsCell.getStringCellValue());
+                        governmentId = result[0];
+                        loanProductShortName = result[1];
+                    }
+
+                    if (StringUtils.isBlank(governmentId)) {
+                        errorsList.add("Government ID could not be extracted from row " + friendlyRowNum);
                         continue;
                     }
 
-                    final Cell descriptionCell = row.getCell(DESCRIPTION);
-                    String accountId = "";
-                    if (null != descriptionCell) {
-                        accountId = "BLAH - XXX";
-                    }
-
-                    if ("".equals(accountId)) {
-                        errorsList.add("Loan account ID could not be extracted from row " + friendlyRowNum);
+                    if (StringUtils.isBlank(loanProductShortName)) {
+                        errorsList.add("Product short name could not be extracted from row " + friendlyRowNum);
                         continue;
                     }
 
-                    final Cell serialCell = row.getCell(SERIAL);
-                    String serial = null;
-                    if (null != serialCell) {
-                        Double serialNumericValue = serialCell.getNumericCellValue();
-                        if (null != serialNumericValue) {
-                            serial = "" + serialNumericValue.intValue();
-                        }
-                    }
-                    if (null == serial) {
-                        errorsList.add("Serial value in row " + friendlyRowNum + " does not follow expected format.");
-                        continue;
-                    }
-
-                    final Cell amountCell = row.getCell(AMOUNT);
+                    final Cell amountCell = row.getCell(PAID_IN);
                     BigDecimal paymentAmount = null;
                     if (null == amountCell) {
-                        ;
                         errorsList.add("Invalid amount in row " + friendlyRowNum);
                         continue;
                     } else {
@@ -182,7 +154,9 @@ public class MPesaXlsImporter extends AudiBankImporter {
                     final AccountReferenceDto account;
 
                     try {
-                        account = getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName("x", "y");
+                        account = getAccountService()
+                                .lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId,
+                                        loanProductShortName);
                     } catch (Exception e) {
                         errorsList
                                 .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());
@@ -194,17 +168,23 @@ public class MPesaXlsImporter extends AudiBankImporter {
                         errorsList.add("No valid transaction date in row " + friendlyRowNum);
                         continue;
                     }
-                    final Date transDate = transDateCell.getDateCellValue();
+                    final Date transDate = getDate(transDateCell);
+                    if (null == transDateCell) {
+                        errorsList.add("Could not parse transaction date from row " + friendlyRowNum
+                                + ". Date column contained [" + transDateCell + "]");
+                        continue;
+                    }
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
                     final BigDecimal totalPaymentAmountForAccount = addToRunningTotalForAccount(paymentAmount,
                             cumulativeAmountByAccount, account);
 
+                    final String comment = "";
                     AccountPaymentParametersDto cumulativePayment = new AccountPaymentParametersDto(
                             getUserReferenceDto(), account, totalPaymentAmountForAccount, paymentDate,
-                            getPaymentTypeDto(), "serial=" + serial);
+                            getPaymentTypeDto(), comment);
 
                     AccountPaymentParametersDto payment = new AccountPaymentParametersDto(getUserReferenceDto(),
-                            account, paymentAmount, paymentDate, getPaymentTypeDto(), "serial=" + serial);
+                            account, paymentAmount, paymentDate, getPaymentTypeDto(), comment);
 
                     List<InvalidPaymentReason> errors = getAccountService().validatePayment(cumulativePayment);
                     if (!errors.isEmpty()) {
@@ -238,5 +218,26 @@ public class MPesaXlsImporter extends AudiBankImporter {
         }
 
         return new ParseResultDto(errorsList, pmts);
+    }
+
+    static final String dateFormat = "yyyy-MM-dd HH:mm:ss";
+    
+    Date getDate(Cell transDateCell) throws ParseException {
+        Date date = null;
+        switch (transDateCell.getCellType()) {
+        case Cell.CELL_TYPE_STRING:
+            final SimpleDateFormat dateAsText = new SimpleDateFormat(dateFormat);
+            dateAsText.setLenient(false);
+            date = dateAsText.parse(transDateCell.getStringCellValue());
+            break;
+        case Cell.CELL_TYPE_NUMERIC:
+            date = transDateCell.getDateCellValue();
+            break;
+        }
+        return date;
+    }
+    
+    String[] parseClientIdentifiers(String stringCellValue) {
+        return stringCellValue.split(" ");
     }
 }
