@@ -104,9 +104,6 @@ public class MPesaXlsImporterTest {
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
         assertThat(result.getSuccessfullyParsedRows().size(), is(3));
-        for (AccountPaymentParametersDto a : result.getSuccessfullyParsedRows()) {
-            System.out.println(a.getAccount().getAccountId());
-        }
         assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
     }
 
