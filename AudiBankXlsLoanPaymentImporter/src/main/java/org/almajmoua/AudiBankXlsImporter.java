@@ -171,7 +171,6 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     final Cell amountCell = row.getCell(AMOUNT);
                     BigDecimal paymentAmount = null;
                     if (null == amountCell) {
-                        ;
                         errorsList.add("Invalid amount in row " + friendlyRowNum);
                         continue;
                     } else {
