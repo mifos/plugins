@@ -30,8 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -43,10 +41,12 @@ import org.mifos.StandardImport;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
 import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
+import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.spi.ParseResultDto;
 
 public class MPesaXlsImporter extends StandardImport {
-    private static final String COMPLETED = "Completed";
+    private static final String EXPECTED_STATUS = "Completed";
+    static final String PAYMENT_TYPE = "MPESA/ZAP";
     static final int RECEIPT = 0, TRANS_DATE = 1, DETAILS = 2, STATUS = 3, WITHDRAWN = 4, PAID_IN = 5, BALANCE = 6,
             BALANCE_CONFIRMED = 7, TRANSACTION_TYPE = 8, OTHER_PARTY_INFO = 9, TRANSACTION_PARTY_DETAILS = 10,
             MAX_CELL_NUM = 11;
@@ -65,7 +65,15 @@ public class MPesaXlsImporter extends StandardImport {
         Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
 
         try {
-            setPaymentTypeDto(findPaymentType("MPESA/ZAP"));
+            {
+                final PaymentTypeDto paymentType = findPaymentType(PAYMENT_TYPE);
+                if (null != paymentType) {
+                    setPaymentTypeDto(paymentType);
+                } else {
+                    throw new RuntimeException("Payment type " + PAYMENT_TYPE + " not found. Have you configured" +
+                    		" this payment type?");
+                }
+            }
 
             final HSSFWorkbook workbook = new HSSFWorkbook(input);
             final HSSFSheet sheet = workbook.getSheetAt(0);
@@ -119,8 +127,9 @@ public class MPesaXlsImporter extends StandardImport {
                     if (null != statusCell) {
                         status = statusCell.getStringCellValue().trim();
 
-                        if (!status.equals(COMPLETED)) {
-                            errorsList.add("Row " + friendlyRowNum + " has a status other than \"" + COMPLETED + "\".");
+                        if (!status.equals(EXPECTED_STATUS)) {
+                            errorsList.add("Row " + friendlyRowNum + " has a status other than \"" + EXPECTED_STATUS
+                                    + "\".");
                         }
                     }
 
@@ -221,7 +230,7 @@ public class MPesaXlsImporter extends StandardImport {
     }
 
     static final String dateFormat = "yyyy-MM-dd HH:mm:ss";
-    
+
     Date getDate(Cell transDateCell) throws ParseException {
         Date date = null;
         switch (transDateCell.getCellType()) {
@@ -236,7 +245,7 @@ public class MPesaXlsImporter extends StandardImport {
         }
         return date;
     }
-    
+
     String[] parseClientIdentifiers(String stringCellValue) {
         return stringCellValue.split(" ");
     }

@@ -82,7 +82,7 @@ public class MPesaXlsImporterTest {
                 accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
                         anyString())).thenReturn(account);
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
-        when(paymentTypeDto.getName()).thenReturn("MPESA/ZAP");
+        when(paymentTypeDto.getName()).thenReturn(MPesaXlsImporter.PAYMENT_TYPE);
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
