@@ -70,8 +70,8 @@ public class MPesaXlsImporter extends StandardImport {
                 if (null != paymentType) {
                     setPaymentTypeDto(paymentType);
                 } else {
-                    throw new RuntimeException("Payment type " + PAYMENT_TYPE + " not found. Have you configured" +
-                    		" this payment type?");
+                    throw new RuntimeException("Payment type " + PAYMENT_TYPE + " not found. Have you configured"
+                            + " this payment type?");
                 }
             }
 
@@ -128,8 +128,8 @@ public class MPesaXlsImporter extends StandardImport {
                         status = statusCell.getStringCellValue().trim();
 
                         if (!status.equals(EXPECTED_STATUS)) {
-                            errorsList.add("Row " + friendlyRowNum + " has a status other than \"" + EXPECTED_STATUS
-                                    + "\".");
+                            errorsList.add("Status in row " + friendlyRowNum + " is " + status + " instead of "
+                                    + EXPECTED_STATUS);
                         }
                     }
 
