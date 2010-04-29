@@ -134,11 +134,13 @@ public class MPesaXlsImporter extends StandardImport {
                     }
 
                     final Cell detailsCell = row.getCell(TRANSACTION_PARTY_DETAILS);
-                    String governmentId = "", loanProductShortName = "";
+                    String governmentId = "", advanceLoanProductShortName = "", normalLoanProductShortName = "", savingsProductShortName = "";
                     if (null != detailsCell) {
                         String[] result = parseClientIdentifiers(detailsCell.getStringCellValue());
                         governmentId = result[0];
-                        loanProductShortName = result[1];
+                        advanceLoanProductShortName = result[1];
+                        normalLoanProductShortName = result[2];
+                        savingsProductShortName = result[3];
                     }
 
                     if (StringUtils.isBlank(governmentId)) {
@@ -146,8 +148,18 @@ public class MPesaXlsImporter extends StandardImport {
                         continue;
                     }
 
-                    if (StringUtils.isBlank(loanProductShortName)) {
-                        errorsList.add("Product short name could not be extracted from row " + friendlyRowNum);
+                    if (StringUtils.isBlank(advanceLoanProductShortName)) {
+                        errorsList.add("Advance loan product short name could not be extracted from row " + friendlyRowNum);
+                        continue;
+                    }
+
+                    if (StringUtils.isBlank(normalLoanProductShortName)) {
+                        errorsList.add("Normal loan product short name could not be extracted from row " + friendlyRowNum);
+                        continue;
+                    }
+
+                    if (StringUtils.isBlank(savingsProductShortName)) {
+                        errorsList.add("Savings product short name could not be extracted from row " + friendlyRowNum);
                         continue;
                     }
 
@@ -160,12 +172,34 @@ public class MPesaXlsImporter extends StandardImport {
                         // FIXME: possible data loss converting double to BigDecimal?
                         paymentAmount = new BigDecimal(amountCell.getNumericCellValue());
                     }
-                    final AccountReferenceDto account;
+                    final AccountReferenceDto advanceLoanAccount;
+                    final AccountReferenceDto normalLoanAccount;
+                    final AccountReferenceDto savingsAccount;
 
                     try {
-                        account = getAccountService()
+                        advanceLoanAccount = getAccountService()
                                 .lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId,
-                                        loanProductShortName);
+                                        advanceLoanProductShortName);
+                    } catch (Exception e) {
+                        errorsList
+                                .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());
+                        continue;
+                    }
+
+                    try {
+                        normalLoanAccount = getAccountService()
+                                .lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId,
+                                        normalLoanProductShortName);
+                    } catch (Exception e) {
+                        errorsList
+                                .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());
+                        continue;
+                    }
+
+                    try {
+                        savingsAccount = getAccountService()
+                                .lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId,
+                                        savingsProductShortName);
                     } catch (Exception e) {
                         errorsList
                                 .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());
@@ -185,15 +219,15 @@ public class MPesaXlsImporter extends StandardImport {
                     }
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
                     final BigDecimal totalPaymentAmountForAccount = addToRunningTotalForAccount(paymentAmount,
-                            cumulativeAmountByAccount, account);
+                            cumulativeAmountByAccount, advanceLoanAccount);
 
                     final String comment = "";
                     AccountPaymentParametersDto cumulativePayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), account, totalPaymentAmountForAccount, paymentDate,
+                            getUserReferenceDto(), advanceLoanAccount, totalPaymentAmountForAccount, paymentDate,
                             getPaymentTypeDto(), comment);
 
                     AccountPaymentParametersDto payment = new AccountPaymentParametersDto(getUserReferenceDto(),
-                            account, paymentAmount, paymentDate, getPaymentTypeDto(), comment);
+                            advanceLoanAccount, paymentAmount, paymentDate, getPaymentTypeDto(), comment);
 
                     List<InvalidPaymentReason> errors = getAccountService().validatePayment(cumulativePayment);
                     if (!errors.isEmpty()) {
