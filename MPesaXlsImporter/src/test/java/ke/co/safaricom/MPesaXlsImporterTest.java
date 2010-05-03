@@ -27,6 +27,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.FileInputStream;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -81,6 +82,11 @@ public class MPesaXlsImporterTest {
         when(
                 accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
                         anyString())).thenReturn(account);
+        when(
+                accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
+                        anyString(), anyString())).thenReturn(account);
+        when(accountService.getTotalPayementDueAmount(any(AccountReferenceDto.class))).thenReturn(
+                BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn(MPesaXlsImporter.PAYMENT_TYPE);
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
@@ -103,7 +109,7 @@ public class MPesaXlsImporterTest {
         String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().size(), is(3));
+        assertThat(result.getSuccessfullyParsedRows().size(), is(9));
         assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
     }
 
