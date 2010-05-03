@@ -52,7 +52,7 @@ public class MPesaXlsImporter extends StandardImport {
             MAX_CELL_NUM = 11;
 
     final List<String> errorsList = new ArrayList<String>();
-    boolean skippingRowsBeforeTransactionData = true;
+    
 
     @Override
     public String getDisplayName() {
@@ -321,6 +321,7 @@ public class MPesaXlsImporter extends StandardImport {
     }
 
     private void skipReadingToTransactionData(Iterator<Row> rowIterator, Row row) {
+        boolean skippingRowsBeforeTransactionData = true;
         while (errorsList.isEmpty() && skippingRowsBeforeTransactionData) {
             if (!rowIterator.hasNext()) {
                 errorsList.add("No rows found with import data.");
