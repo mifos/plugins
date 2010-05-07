@@ -152,9 +152,9 @@ public class MPesaXlsImporter extends StandardImport {
                     final AccountReferenceDto savingsAccount;
                     final AccountReferenceDto normalLoanAccount;
 
-                    final BigDecimal advanceLoanAccountPayementAmount;
-                    final BigDecimal normalLoanAccountPayementAmount;
-                    final BigDecimal savingsAccountPayementAmount;
+                    final BigDecimal advanceLoanAccountPaymentAmount;
+                    final BigDecimal normalLoanAccountPaymentAmount;
+                    final BigDecimal savingsAccountPaymentAmount;
 
                     final BigDecimal advanceLoanAccountDue;
                     final BigDecimal normalLoanAccountDue;
@@ -163,34 +163,34 @@ public class MPesaXlsImporter extends StandardImport {
                     normalLoanAccount = getLoanAccount(governmentId, normalLoanProductShortName, friendlyRowNum);
                     savingsAccount = getSavingsAccount(governmentId, savingsProductShortName, friendlyRowNum);
 
-                    advanceLoanAccountDue = getTotalPayementDueAmount(advanceLoanAccount, friendlyRowNum);
-                    normalLoanAccountDue = getTotalPayementDueAmount(normalLoanAccount, friendlyRowNum);
+                    advanceLoanAccountDue = getTotalPaymentDueAmount(advanceLoanAccount, friendlyRowNum);
+                    normalLoanAccountDue = getTotalPaymentDueAmount(normalLoanAccount, friendlyRowNum);
 
                     if (paymentAmount.compareTo(advanceLoanAccountDue) > 0) {
-                        advanceLoanAccountPayementAmount = advanceLoanAccountDue;
+                        advanceLoanAccountPaymentAmount = advanceLoanAccountDue;
                         paymentAmount = paymentAmount.subtract(advanceLoanAccountDue);
                     } else {
-                        advanceLoanAccountPayementAmount = paymentAmount;
+                        advanceLoanAccountPaymentAmount = paymentAmount;
                         paymentAmount = BigDecimal.ZERO;
                     }
 
                     if (paymentAmount.compareTo(BigDecimal.ZERO) > 0) {
                         if (paymentAmount.compareTo(normalLoanAccountDue) > 0) {
-                            normalLoanAccountPayementAmount = normalLoanAccountDue;
+                            normalLoanAccountPaymentAmount = normalLoanAccountDue;
                             paymentAmount = paymentAmount.subtract(normalLoanAccountDue);
                         } else {
-                            normalLoanAccountPayementAmount = paymentAmount;
+                            normalLoanAccountPaymentAmount = paymentAmount;
                             paymentAmount = BigDecimal.ZERO;
                         }
                     } else {
-                        normalLoanAccountPayementAmount = BigDecimal.ZERO;
+                        normalLoanAccountPaymentAmount = BigDecimal.ZERO;
                     }
 
                     if (paymentAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        savingsAccountPayementAmount = paymentAmount;
+                        savingsAccountPaymentAmount = paymentAmount;
                         paymentAmount = BigDecimal.ZERO;
                     } else {
-                        savingsAccountPayementAmount = BigDecimal.ZERO;
+                        savingsAccountPaymentAmount = BigDecimal.ZERO;
                     }
 
                     final Cell transDateCell = row.getCell(TRANS_DATE);
@@ -208,11 +208,11 @@ public class MPesaXlsImporter extends StandardImport {
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
 
                     final BigDecimal totalPaymentAmountForAdvanceLoanAccount = addToRunningTotalForAccount(
-                            advanceLoanAccountPayementAmount, cumulativeAmountByAccount, advanceLoanAccount);
+                            advanceLoanAccountPaymentAmount, cumulativeAmountByAccount, advanceLoanAccount);
                     final BigDecimal totalPaymentAmountForNormalLoanAccount = addToRunningTotalForAccount(
-                            normalLoanAccountPayementAmount, cumulativeAmountByAccount, normalLoanAccount);
+                            normalLoanAccountPaymentAmount, cumulativeAmountByAccount, normalLoanAccount);
                     final BigDecimal totalPaymentAmountForSavingsAccount = addToRunningTotalForAccount(
-                            savingsAccountPayementAmount, cumulativeAmountByAccount, savingsAccount);
+                            savingsAccountPaymentAmount, cumulativeAmountByAccount, savingsAccount);
 
                     final String comment = "";
                     AccountPaymentParametersDto cumulativePaymentAdvanceLoan = new AccountPaymentParametersDto(
@@ -226,20 +226,20 @@ public class MPesaXlsImporter extends StandardImport {
                             paymentDate, getPaymentTypeDto(), comment);
 
                     AccountPaymentParametersDto advanceLoanPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), advanceLoanAccount, advanceLoanAccountPayementAmount, paymentDate,
+                            getUserReferenceDto(), advanceLoanAccount, advanceLoanAccountPaymentAmount, paymentDate,
                             getPaymentTypeDto(), comment);
                     AccountPaymentParametersDto normalLoanpayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), normalLoanAccount, normalLoanAccountPayementAmount, paymentDate,
+                            getUserReferenceDto(), normalLoanAccount, normalLoanAccountPaymentAmount, paymentDate,
                             getPaymentTypeDto(), comment);
                     AccountPaymentParametersDto savingsPayment = new AccountPaymentParametersDto(getUserReferenceDto(),
-                            savingsAccount, savingsAccountPayementAmount, paymentDate, getPaymentTypeDto(), comment);
+                            savingsAccount, savingsAccountPaymentAmount, paymentDate, getPaymentTypeDto(), comment);
 
                     List<InvalidPaymentReason> errors = getAccountService().validatePayment(
                             cumulativePaymentAdvanceLoan);
                     errors.addAll(getAccountService().validatePayment(cumulativePaymentNormalLoan));
                     errors.addAll(getAccountService().validatePayment(cumulativePaymentSavings));
 
-                    checkPayementErrors(errors, friendlyRowNum);
+                    checkPaymentErrors(errors, friendlyRowNum);
 
                     pmts.add(advanceLoanPayment);
                     pmts.add(normalLoanpayment);
@@ -261,7 +261,7 @@ public class MPesaXlsImporter extends StandardImport {
         }
     }
 
-    private void checkPayementErrors(List<InvalidPaymentReason> errors, int friendlyRowNum) {
+    private void checkPaymentErrors(List<InvalidPaymentReason> errors, int friendlyRowNum) {
         if (!errors.isEmpty()) {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
@@ -283,12 +283,12 @@ public class MPesaXlsImporter extends StandardImport {
 
     }
 
-    private BigDecimal getTotalPayementDueAmount(AccountReferenceDto advanceLoanAccount, int friendlyRowNum) {
+    private BigDecimal getTotalPaymentDueAmount(AccountReferenceDto advanceLoanAccount, int friendlyRowNum) {
         BigDecimal totalPaymentDue = null;
         try {
-            totalPaymentDue = getAccountService().getTotalPayementDueAmount(advanceLoanAccount);
+            totalPaymentDue = getAccountService().getTotalPaymentDueAmount(advanceLoanAccount);
         } catch (Exception e) {
-            errorsList.add("Error getting total payement due for row " + friendlyRowNum + ": " + e.getMessage());
+            errorsList.add("Error getting total payment due for row " + friendlyRowNum + ": " + e.getMessage());
         }
         if (totalPaymentDue == null) {
             return BigDecimal.ZERO;
