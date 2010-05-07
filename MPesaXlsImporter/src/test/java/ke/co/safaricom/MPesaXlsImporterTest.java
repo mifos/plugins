@@ -85,7 +85,7 @@ public class MPesaXlsImporterTest {
         when(
                 accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
                         anyString(), anyString())).thenReturn(account);
-        when(accountService.getTotalPayementDueAmount(any(AccountReferenceDto.class))).thenReturn(
+        when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(
                 BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn(MPesaXlsImporter.PAYMENT_TYPE);
