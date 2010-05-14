@@ -81,7 +81,7 @@ public class MPesaXlsImporter extends StandardImport {
 
             final Iterator<Row> rowIterator = sheet.iterator();
 
-            skipReadingToTransactionData(rowIterator, row);
+            skipReadingToTransactionData(rowIterator);
 
             /* Parse transaction data */
             if (errorsList.isEmpty()) {
@@ -324,14 +324,14 @@ public class MPesaXlsImporter extends StandardImport {
         return loanAccount;
     }
 
-    private void skipReadingToTransactionData(Iterator<Row> rowIterator, Row row) {
+    private void skipReadingToTransactionData(Iterator<Row> rowIterator) {
         boolean skippingRowsBeforeTransactionData = true;
         while (errorsList.isEmpty() && skippingRowsBeforeTransactionData) {
             if (!rowIterator.hasNext()) {
                 errorsList.add("No rows found with import data.");
                 break;
             }
-            row = rowIterator.next();
+            Row row = rowIterator.next();
             if (row.getCell(0).getStringCellValue().trim().equals("Transactions")) {
                 skippingRowsBeforeTransactionData = false;
                 /* skip row with column descriptions */
