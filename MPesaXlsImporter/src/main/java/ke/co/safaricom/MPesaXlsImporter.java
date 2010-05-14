@@ -344,15 +344,12 @@ public class MPesaXlsImporter extends StandardImport {
 
     Date getDate(Cell transDateCell) throws ParseException {
         Date date = null;
-        switch (transDateCell.getCellType()) {
-        case Cell.CELL_TYPE_STRING:
+        if(transDateCell.getCellType() == Cell.CELL_TYPE_STRING) {
             final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMATE);
             dateAsText.setLenient(false);
             date = dateAsText.parse(transDateCell.getStringCellValue());
-            break;
-        case Cell.CELL_TYPE_NUMERIC:
+        } else if(transDateCell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
             date = transDateCell.getDateCellValue();
-            break;
         }
         return date;
     }
