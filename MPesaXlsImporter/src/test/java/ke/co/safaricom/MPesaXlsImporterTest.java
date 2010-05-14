@@ -126,7 +126,7 @@ public class MPesaXlsImporterTest {
         String fakeDateString = "2009-10-15 14:52:51";
         when(cellWithDate.getCellType()).thenReturn(Cell.CELL_TYPE_STRING);
         when(cellWithDate.getStringCellValue()).thenReturn(fakeDateString);
-        Date expected = new SimpleDateFormat(MPesaXlsImporter.dateFormat).parse(fakeDateString);
+        Date expected = new SimpleDateFormat(MPesaXlsImporter.DATE_FORMATE).parse(fakeDateString);
         assertThat(concreteImporter.getDate(cellWithDate), is(expected));
     }
 }

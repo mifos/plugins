@@ -340,13 +340,13 @@ public class MPesaXlsImporter extends StandardImport {
         }
     }
 
-    static final String dateFormat = "yyyy-MM-dd HH:mm:ss";
+    static final String DATE_FORMATE = "yyyy-MM-dd HH:mm:ss";
 
     Date getDate(Cell transDateCell) throws ParseException {
         Date date = null;
         switch (transDateCell.getCellType()) {
         case Cell.CELL_TYPE_STRING:
-            final SimpleDateFormat dateAsText = new SimpleDateFormat(dateFormat);
+            final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMATE);
             dateAsText.setLenient(false);
             date = dateAsText.parse(transDateCell.getStringCellValue());
             break;
