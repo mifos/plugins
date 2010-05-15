@@ -64,7 +64,7 @@ public class MPesaXlsImporter extends StandardImport {
 
     @Override
     public String getDisplayName() {
-        return "M-PESA (Excel 2007)";
+        return "M-PESA Excel 97(-2007)";
     }
 
     @Override
