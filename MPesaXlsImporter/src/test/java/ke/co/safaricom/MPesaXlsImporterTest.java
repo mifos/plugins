@@ -24,7 +24,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.FileInputStream;
 import java.math.BigDecimal;
@@ -78,20 +78,14 @@ public class MPesaXlsImporterTest {
     @Before
     public void setUpBeforeMethod() throws Exception {
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
-        when(
-                accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
-                        anyString())).thenReturn(account);
-        when(
-                accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
-                        anyString(), anyString())).thenReturn(account);
+        when(accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(), anyString())).thenReturn(account);
+        when(accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(anyString(), anyString())).thenReturn(account);
         List<String> importTransactionOrder = new ArrayList<String>();
         importTransactionOrder.add("ALA");
         importTransactionOrder.add("NLA");
         importTransactionOrder.add("SA");
-        when(accountService.getMifosConfiguration("ke.co.safaricom.MPesaXlsImporter.ImportTransactionOrder"))
-                .thenReturn(importTransactionOrder);
-        when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(
-                BigDecimal.valueOf(1000.0));
+        when(accountService.getMifosConfiguration("ke.co.safaricom.MPesaXlsImporter.ImportTransactionOrder")).thenReturn(importTransactionOrder);
+        when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn(MPesaXlsImporter.PAYMENT_TYPE);
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
@@ -126,6 +120,16 @@ public class MPesaXlsImporterTest {
     }
 
     @Test
+    public void successfulImport() throws Exception {
+        String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
+        ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
+        assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
+        assertThat(result.getSuccessfullyParsedPayments().size(), is(8));
+        assertThat(transactionImport.getSuccessfullyParsedRows(), is(3));
+        assertThat(result.getSuccessfullyParsedPayments().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
+    }
+    
+    @Test
     public void checkAndSetValuesSuccess() {
         List<String> parameters = concreteImporter.checkAndGetValues("GovID12 AL1 NL1 SA1");
 
@@ -147,14 +151,46 @@ public class MPesaXlsImporterTest {
         concreteImporter.getImportTransactionOrder().clear();
         concreteImporter.checkAndGetValues("GovtID1");
     }
-
+    
     @Test
-    public void successfulImport() throws Exception {
-        String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
-        ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
-        assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().size(), is(9));
-        assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
+    public void getLoanAccountReturnsNull() throws Exception {
+        String govId = "12345";
+        String loanPrdShortName = "LP";
+        reset(accountService);
+        when(accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(govId, loanPrdShortName))
+        .thenThrow(new RuntimeException("loan not found for client government id " + govId + " and loan product short name " + loanPrdShortName));
+        AccountReferenceDto ar = concreteImporter.getLoanAccount(govId, loanPrdShortName);
+        Assert.assertNull(ar);
     }
 
+    @Test(expected=RuntimeException.class)
+    public void getLoanAccountThrowsException() throws Exception {
+        String govId = "12345";
+        String loanPrdShortName = "LP";
+        reset(accountService);
+        when(accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(govId, loanPrdShortName))
+        .thenThrow(new RuntimeException("Some message"));
+        AccountReferenceDto ar = concreteImporter.getLoanAccount(govId, loanPrdShortName);
+    }
+
+    @Test
+    public void getSavingsAccountReturnsNull() throws Exception {
+        String govId = "12345";
+        String savingsPrdShortName = "LP";
+        reset(accountService);
+        when(accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(govId, savingsPrdShortName))
+        .thenThrow(new RuntimeException("savings not found for client government id " + govId + " and savings product short name " + savingsPrdShortName));
+        AccountReferenceDto ar = concreteImporter.getSavingsAccount(govId, savingsPrdShortName);
+        Assert.assertNull(ar);
+    }
+
+    @Test(expected=RuntimeException.class)
+    public void getSavingsAccountThrowsException() throws Exception {
+        String govId = "12345";
+        String savingsPrdShortName = "LP";
+        reset(accountService);
+        when(accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(govId, savingsPrdShortName))
+        .thenThrow(new RuntimeException("Some message"));
+        AccountReferenceDto ar = concreteImporter.getSavingsAccount(govId, savingsPrdShortName);
+    }
 }

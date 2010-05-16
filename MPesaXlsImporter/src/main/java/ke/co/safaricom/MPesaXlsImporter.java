@@ -46,6 +46,14 @@ import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.spi.ParseResultDto;
 
+/**
+ * This class implements mpesa plugin which export transactions from an XLS sheet to Mifos database.
+ * It uses the standard mifos API/SPI. <br>
+ * <a href='http://www.mifos.org/developers/wiki/PluginManagement'>http://www.mifos.org/developers/wiki/PluginManagement</a>
+ * 
+ * 
+ * 
+ */
 public class MPesaXlsImporter extends StandardImport {
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
@@ -67,7 +75,7 @@ public class MPesaXlsImporter extends StandardImport {
     private static List<AccountPaymentParametersDto> pmts;
     private static List<String> errorsList;
     private static List<String> importTransactionOrder;
-
+    private static int successfullyParsedRows;
     @Override
     public String getDisplayName() {
         return "M-PESA Excel 97(-2007)";
@@ -92,6 +100,7 @@ public class MPesaXlsImporter extends StandardImport {
         cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
         pmts = new ArrayList<AccountPaymentParametersDto>();
         errorsList = new LinkedList<String>();
+        successfullyParsedRows = 0;
 
         try {
             final Iterator<Row> rowIterator = new HSSFWorkbook(input).getSheetAt(0).iterator();
@@ -129,17 +138,27 @@ public class MPesaXlsImporter extends StandardImport {
                     }
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
-
-                    String transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
+                    String transactionPartyDetails = null;
+                    
+                    if(row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                        transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getNumericCellValue() +"";
+                        if(transactionPartyDetails.endsWith(".0")){
+                            transactionPartyDetails = transactionPartyDetails.replace(".0", "");
+                        } else {
+                            throw new IllegalArgumentException("Unknown format of cell "+ TRANSACTION_PARTY_DETAILS);
+                        }
+                    } else if (row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_STRING) {
+                    transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
+                    }
                     List<String> parameters = checkAndGetValues(transactionPartyDetails);
 
                     String governmentId = parameters.get(0);
                     List<String> loanPrds = new LinkedList<String>();
-                    String savingsProdSName = parameters.get(parameters.size() - 1);
+                    String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
                     loanPrds.addAll(parameters.subList(1, parameters.size() - 1));
 
                     checkBlank(governmentId, "Government ID", friendlyRowNum);
-                    checkBlank(savingsProdSName, "Savings product short name", friendlyRowNum);
+                    checkBlank(lastInTheOrderProdSName, "Savings product short name", friendlyRowNum);
 
                     BigDecimal paidInAmount = BigDecimal.ZERO;
 
@@ -154,6 +173,12 @@ public class MPesaXlsImporter extends StandardImport {
                         BigDecimal loanAccountTotalDueAmount = BigDecimal.ZERO;
 
                         final AccountReferenceDto loanAccountReference = getLoanAccount(governmentId, loanPrd);
+                        
+                     // skip not found accounts as per specs P1 4.9 M-Pesa plugin
+                        if(loanAccountReference == null){
+                            continue;
+                        }
+                        
                         loanAccountTotalDueAmount = getTotalPaymentDueAmount(loanAccountReference);
 
                         if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -184,30 +209,43 @@ public class MPesaXlsImporter extends StandardImport {
                         continue;
                     }
 
-                    BigDecimal savingsAccDeposit;
-                    AccountReferenceDto savingsAcc;
-                    savingsAcc = getSavingsAccount(governmentId, savingsProdSName);
-
-                    if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        savingsAccDeposit = paidInAmount;
-                        paidInAmount = BigDecimal.ZERO;
-                    } else {
-                        savingsAccDeposit = BigDecimal.ZERO;
+                    BigDecimal lastInOrderAmount;
+                    AccountReferenceDto lastInTheOrderAcc;
+                    lastInTheOrderAcc = getSavingsAccount(governmentId, lastInTheOrderProdSName);
+                    
+                    if(lastInTheOrderAcc == null) {
+                        lastInTheOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
+                        if(lastInTheOrderAcc != null && !(paidInAmount.compareTo(getTotalPaymentDueAmount(lastInTheOrderAcc))==0)) {
+                            errorsList.add("Last account is a laon account but the total payment amount is less than amount paid in. Input line number: "+ friendlyRowNum);
+                            continue;  
+                        }
                     }
-
-                    final AccountPaymentParametersDto cumulativePaymentSavings = createPaymentParametersDto(savingsAcc,
-                            savingsAccDeposit, paymentDate);
-                    final AccountPaymentParametersDto savingsAccPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), savingsAcc, savingsAccDeposit, paymentDate, getPaymentTypeDto(), "");
-
-                    if (!isPaymentValid(cumulativePaymentSavings, friendlyRowNum)) {
+                    
+                    if(lastInTheOrderAcc == null) {
+                        errorsList.add("No acccount found" + friendlyRowNum);
                         continue;
                     }
 
+                    if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        lastInOrderAmount = paidInAmount;
+                        paidInAmount = BigDecimal.ZERO;
+                    } else {
+                        lastInOrderAmount = BigDecimal.ZERO;
+                    }
+                    
+                    final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInTheOrderAcc,
+                            lastInOrderAmount, paymentDate);
+                    final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
+                            getUserReferenceDto(), lastInTheOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "");
+
+                    if (!isPaymentValid(cumulativePaymentlastAcc, friendlyRowNum)) {
+                        continue;
+                    }
+                    successfullyParsedRows+=1;
                     for (AccountPaymentParametersDto loanPayment : loanPaymentList) {
                         pmts.add(loanPayment);
                     }
-                    pmts.add(savingsAccPayment);
+                    pmts.add(lastInTheOrderAccPayment);
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
                     errorsList.add(e.getMessage() + ". Input line number: " + friendlyRowNum);
@@ -235,12 +273,13 @@ public class MPesaXlsImporter extends StandardImport {
         String[] result = transactionPartyDetails.split(" ");
         parameters.addAll(Arrays.asList(result));
         if (result.length == 1) {
-            if (getImportTransactionOrder() != null && !getImportTransactionOrder().isEmpty()) {
-                parameters.addAll(getImportTransactionOrder());
-            } else {
+            List<String> importTransactionOrder = getImportTransactionOrder();
+            if (importTransactionOrder == null || importTransactionOrder.isEmpty()) {
                 throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
                         + IMPORT_TRANSACTION_ORDER + " property is not set");
+
             }
+            parameters.addAll(importTransactionOrder);
         }
         return parameters;
     }
@@ -338,16 +377,28 @@ public class MPesaXlsImporter extends StandardImport {
 
     }
 
-    private AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName)
-            throws Exception {
-        return getAccountService().lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
-                governmentId, savingsProductShortName);
+    protected AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName) throws Exception {
+        AccountReferenceDto account = null;
+        try {
+            account = getAccountService().lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(governmentId, savingsProductShortName);
+        } catch (Exception e) {
+            if (!e.getMessage().equals("savings not found for client government id " + governmentId + " and savings product short name " + savingsProductShortName)) {
+                throw e;
+            }
+        }
+        return account;
     }
 
-    private AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName)
-            throws Exception {
-        return getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(
-                governmentId, loanProductShortName);
+    protected AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName) throws Exception {
+        AccountReferenceDto account = null;
+        try {
+            account = getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId, loanProductShortName);
+        } catch (Exception e) {
+            if(!e.getMessage().equals("loan not found for client government id " + governmentId  + " and loan product short name " + loanProductShortName)) {
+                throw e;
+            }
+        }
+        return account;
     }
 
     private void skipToTransactionData(final Iterator<Row> rowIterator) {
@@ -387,8 +438,8 @@ public class MPesaXlsImporter extends StandardImport {
      * See <a href="http://mifosforge.jira.com/browse/MIFOS-2909">MIFOS-2909</a>.
      */
     @Override
-    public int getNumberOfTransactionsPerRow() {
-        return 3;
+    public int getSuccessfullyParsedRows() {
+        return successfullyParsedRows;
     }
 
     class MPesaXlsImporterException extends RuntimeException {

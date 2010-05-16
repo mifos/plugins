@@ -105,7 +105,7 @@ public class AudiBankXlsImporterTest {
         String testDataFilename = this.getClass().getResource("/audi_test.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(3));
+        assertThat(result.getSuccessfullyParsedPayments().toString(), result.getSuccessfullyParsedPayments().size(), is(3));
     }
 
     @Test
@@ -113,8 +113,8 @@ public class AudiBankXlsImporterTest {
         String testDataFilename = this.getClass().getResource("/audi_test_mifos_id.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().size(), is(3));
-        assertThat(result.getSuccessfullyParsedRows().toString(), result.getSuccessfullyParsedRows().get(1)
+        assertThat(result.getSuccessfullyParsedPayments().toString(), result.getSuccessfullyParsedPayments().size(), is(3));
+        assertThat(result.getSuccessfullyParsedPayments().toString(), result.getSuccessfullyParsedPayments().get(1)
                 .getAccount().getAccountId(), is(idFromGlobalAccountNumber));
     }
 

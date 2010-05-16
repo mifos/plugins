@@ -81,12 +81,12 @@ public abstract class StandardImport extends TransactionImport {
 
     @Override
     public void store(InputStream input) throws Exception {
-        getAccountService().makePayments(parse(input).getSuccessfullyParsedRows());
+        getAccountService().makePayments(parse(input).getSuccessfullyParsedPayments());
     }
 
     @Override
-    public int getNumberOfTransactionsPerRow() {
-        return 1;
+    public int getSuccessfullyParsedRows() {
+        return -1;
     }
 
 }

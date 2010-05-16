@@ -66,7 +66,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
     @Override
     public void store(InputStream input) throws Exception {
-        getAccountService().disburseLoans(parse(input).getSuccessfullyParsedRows());
+        getAccountService().disburseLoans(parse(input).getSuccessfullyParsedPayments());
     }
 
     @Override
@@ -252,7 +252,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
     }
 
     @Override
-    public int getNumberOfTransactionsPerRow() {
+    public int getSuccessfullyParsedRows() {
         return 1;
     }
 

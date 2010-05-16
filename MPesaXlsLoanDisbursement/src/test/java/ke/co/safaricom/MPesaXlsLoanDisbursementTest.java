@@ -113,8 +113,8 @@ public class MPesaXlsLoanDisbursementTest {
         String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
-        assertThat(result.getSuccessfullyParsedRows().size(), is(3));
-        assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
+        assertThat(result.getSuccessfullyParsedPayments().size(), is(3));
+        assertThat(result.getSuccessfullyParsedPayments().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
     }
 
 }
