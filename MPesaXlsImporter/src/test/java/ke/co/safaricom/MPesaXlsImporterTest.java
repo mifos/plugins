@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import junit.framework.Assert;
+import ke.co.safaricom.MPesaXlsImporter.MPesaXlsImporterException;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -74,10 +77,6 @@ public class MPesaXlsImporterTest {
      */
     @Before
     public void setUpBeforeMethod() throws Exception {
-        concreteImporter = new MPesaXlsImporter();
-        transactionImport = concreteImporter;
-        transactionImport.setAccountService(accountService);
-        transactionImport.setUserReferenceDto(userReferenceDto);
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
         when(
                 accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
@@ -85,6 +84,11 @@ public class MPesaXlsImporterTest {
         when(
                 accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
                         anyString(), anyString())).thenReturn(account);
+        List<String> importTransactionOrder = new ArrayList<String>();
+        importTransactionOrder.add("ALA");
+        importTransactionOrder.add("NLA");
+        importTransactionOrder.add("SA");
+        when(accountService.getMifosConfiguration("ImportTransactionOrder")).thenReturn(importTransactionOrder);
         when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(
                 BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
@@ -92,6 +96,10 @@ public class MPesaXlsImporterTest {
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
+        concreteImporter = new MPesaXlsImporter();
+        transactionImport = concreteImporter;
+        transactionImport.setAccountService(accountService);
+        transactionImport.setUserReferenceDto(userReferenceDto);
     }
 
     /**
@@ -104,6 +112,39 @@ public class MPesaXlsImporterTest {
         concreteImporter = null;
     }
 
+    @Mock
+    Cell cellWithDate;
+
+    @Test
+    public void canParseTextBasedDate() throws Exception {
+        String fakeDateString = "2009-10-15 14:52:51";
+        when(cellWithDate.getCellType()).thenReturn(Cell.CELL_TYPE_STRING);
+        when(cellWithDate.getStringCellValue()).thenReturn(fakeDateString);
+        Date expected = new SimpleDateFormat(MPesaXlsImporter.DATE_FORMAT).parse(fakeDateString);
+        assertThat(concreteImporter.getDate(cellWithDate), is(expected));
+    }
+
+    @Test
+    public void checkAndSetValuesSuccess() {
+        List<String> parameters = concreteImporter.checkAndGetValues("GovID12 AL1 NL1 SA1");
+        Assert.assertEquals("GovID12", parameters.get(0));
+        Assert.assertEquals("AL1", parameters.get(1));
+        Assert.assertEquals("NL1", parameters.get(2));
+        Assert.assertEquals("SA1", parameters.get(3));
+
+        parameters = concreteImporter.checkAndGetValues("GovID12");
+        Assert.assertEquals("GovID12", parameters.get(0));
+        Assert.assertEquals("ALA", parameters.get(1));
+        Assert.assertEquals("NLA", parameters.get(2));
+        Assert.assertEquals("SA", parameters.get(3));
+    }
+
+    @Test(expected = MPesaXlsImporterException.class)
+    public void checkAndSetValuesFailure() {
+        concreteImporter.getImportTransactionOrder().clear();
+        concreteImporter.checkAndGetValues("GovtID1");
+    }
+
     @Test
     public void successfulImport() throws Exception {
         String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();
@@ -113,20 +154,4 @@ public class MPesaXlsImporterTest {
         assertThat(result.getSuccessfullyParsedRows().get(1).getAccount().getAccountId(), is(fakeMifosAccountId));
     }
 
-    @Test
-    public void canParseClientIdentifiers() {
-        assertThat(concreteImporter.parseClientIdentifiers("28 bl"), is(new String[] { "28", "bl" }));
-    }
-
-    @Mock
-    Cell cellWithDate;
-
-    @Test
-    public void canParseTextBasedDate() throws Exception {
-        String fakeDateString = "2009-10-15 14:52:51";
-        when(cellWithDate.getCellType()).thenReturn(Cell.CELL_TYPE_STRING);
-        when(cellWithDate.getStringCellValue()).thenReturn(fakeDateString);
-        Date expected = new SimpleDateFormat(MPesaXlsImporter.DATE_FORMATE).parse(fakeDateString);
-        assertThat(concreteImporter.getDate(cellWithDate), is(expected));
-    }
 }

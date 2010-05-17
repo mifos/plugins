@@ -25,9 +25,11 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,160 +62,150 @@ public class MPesaXlsImporter extends StandardImport {
     protected static final int TRANSACTION_PARTY_DETAILS = 10;
     protected static final int MAX_CELL_NUM = 11;
 
-    private transient final List<String> errorsList = new ArrayList<String>();
+    private static Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount;
+    private static List<AccountPaymentParametersDto> pmts;
+    private static List<String> errorsList;
+    private static List<String> importTransactionOrder;
 
     @Override
     public String getDisplayName() {
         return "M-PESA Excel 97(-2007)";
     }
 
+    protected List<String> getImportTransactionOrder() {
+        if (importTransactionOrder == null) {
+            importTransactionOrder = (List<String>) getAccountService().getMifosConfiguration("ImportTransactionOrder");
+            if (importTransactionOrder == null) {
+                importTransactionOrder = new ArrayList<String>();
+            }
+        }
+        return importTransactionOrder;
+    }
+
+    
+
     @Override
     public ParseResultDto parse(final InputStream input) {
-        final List<AccountPaymentParametersDto> pmts = new ArrayList<AccountPaymentParametersDto>();
-        final Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
-        
+        cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
+        pmts = new ArrayList<AccountPaymentParametersDto>();
+        errorsList = new LinkedList<String>();
+
         try {
             final Iterator<Row> rowIterator = new HSSFWorkbook(input).getSheetAt(0).iterator();
             int friendlyRowNum = 0;
             Row row;
-            
+
             setPaymentType();
 
             skipToTransactionData(rowIterator);
 
+            if (!errorsList.isEmpty()) {
+                return new ParseResultDto(errorsList, pmts);
+            }
+
             /* Parse transaction data */
-            if (errorsList.isEmpty()) {
-                while (rowIterator.hasNext()) {
-                    try {
-                        row = rowIterator.next();
 
-                        friendlyRowNum = row.getRowNum() + 1;
+            while (rowIterator.hasNext()) {
+                try {
+                    row = rowIterator.next();
 
-                        if (!isRowValid(row, friendlyRowNum)) {
-                            continue;
-                        }
+                    friendlyRowNum = row.getRowNum() + 1;
 
-                        Date transDate;
-                        try {
-                            transDate = getDate(row.getCell(TRANSACTION_DATE));
-                        } catch (Exception e) {
-                            errorsList.add("Date in Row " + friendlyRowNum
-                                    + "  does not begin with expected format (YYYY-MM-DD), it contains "
-                                    + row.getCell(TRANSACTION_DATE).getStringCellValue());
-                            continue;
-                        }
-
-                        final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
-                        String governmentId = "";
-                        String advLoanProdSName = "";
-                        String normLoanProdSName = "";
-                        String savingsProdSName = "";
-
-                        final String[] result = parseClientIdentifiers(row.getCell(TRANSACTION_PARTY_DETAILS)
-                                .getStringCellValue());
-                        governmentId = result[0];
-                        advLoanProdSName = result[1];
-                        normLoanProdSName = result[2];
-                        savingsProdSName = result[3];
-
-                        checkBlank(governmentId, "Government ID", friendlyRowNum);
-                        checkBlank(advLoanProdSName, "Advance loan product short name", friendlyRowNum);
-                        checkBlank(normLoanProdSName, "Normal loan product short", friendlyRowNum);
-                        checkBlank(savingsProdSName, "Savings product short name", friendlyRowNum);
-
-                        BigDecimal paymentAmount = BigDecimal.ZERO;
-
-                        // FIXME: possible data loss converting double to BigDecimal?
-                        paymentAmount = new BigDecimal(row.getCell(PAID_IN).getNumericCellValue());
-
-                        AccountReferenceDto advanceLoanAccount;
-                        AccountReferenceDto savingsAccount;
-                        AccountReferenceDto normalLoanAccount;
-
-                        BigDecimal advanceLoanAccountPaymentAmount;
-                        BigDecimal normalLoanAccountPaymentAmount;
-                        BigDecimal savingsAccountPaymentAmount;
-
-                        BigDecimal advanceLoanAccountDue;
-                        BigDecimal normalLoanAccountDue;
-
-                        advanceLoanAccount = getLoanAccount(governmentId, advLoanProdSName, friendlyRowNum);
-                        normalLoanAccount = getLoanAccount(governmentId, normLoanProdSName, friendlyRowNum);
-                        savingsAccount = getSavingsAccount(governmentId, savingsProdSName, friendlyRowNum);
-
-                        advanceLoanAccountDue = getTotalPaymentDueAmount(advanceLoanAccount, friendlyRowNum);
-                        normalLoanAccountDue = getTotalPaymentDueAmount(normalLoanAccount, friendlyRowNum);
-
-                        if (paymentAmount.compareTo(advanceLoanAccountDue) > 0) {
-                            advanceLoanAccountPaymentAmount = advanceLoanAccountDue;
-                            paymentAmount = paymentAmount.subtract(advanceLoanAccountDue);
-                        } else {
-                            advanceLoanAccountPaymentAmount = paymentAmount;
-                            paymentAmount = BigDecimal.ZERO;
-                        }
-
-                        if (paymentAmount.compareTo(BigDecimal.ZERO) > 0) {
-                            if (paymentAmount.compareTo(normalLoanAccountDue) > 0) {
-                                normalLoanAccountPaymentAmount = normalLoanAccountDue;
-                                paymentAmount = paymentAmount.subtract(normalLoanAccountDue);
-                            } else {
-                                normalLoanAccountPaymentAmount = paymentAmount;
-                                paymentAmount = BigDecimal.ZERO;
-                            }
-                        } else {
-                            normalLoanAccountPaymentAmount = BigDecimal.ZERO;
-                        }
-
-                        if (paymentAmount.compareTo(BigDecimal.ZERO) > 0) {
-                            savingsAccountPaymentAmount = paymentAmount;
-                            paymentAmount = BigDecimal.ZERO;
-                        } else {
-                            savingsAccountPaymentAmount = BigDecimal.ZERO;
-                        }
-
-                        final BigDecimal totalPaymentAmountForAdvanceLoanAccount = addToRunningTotalForAccount(
-                                advanceLoanAccountPaymentAmount, cumulativeAmountByAccount, advanceLoanAccount);
-                        final BigDecimal totalPaymentAmountForNormalLoanAccount = addToRunningTotalForAccount(
-                                normalLoanAccountPaymentAmount, cumulativeAmountByAccount, normalLoanAccount);
-                        final BigDecimal totalPaymentAmountForSavingsAccount = addToRunningTotalForAccount(
-                                savingsAccountPaymentAmount, cumulativeAmountByAccount, savingsAccount);
-
-                        final AccountPaymentParametersDto cumulativePaymentAdvanceLoan = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), advanceLoanAccount, totalPaymentAmountForAdvanceLoanAccount,
-                                paymentDate, getPaymentTypeDto(), "");
-                        final AccountPaymentParametersDto cumulativePaymentNormalLoan = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), advanceLoanAccount, totalPaymentAmountForNormalLoanAccount,
-                                paymentDate, getPaymentTypeDto(), "");
-                        final AccountPaymentParametersDto cumulativePaymentSavings = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), advanceLoanAccount, totalPaymentAmountForSavingsAccount,
-                                paymentDate, getPaymentTypeDto(), "");
-
-                        final AccountPaymentParametersDto advanceLoanPayment = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), advanceLoanAccount, advanceLoanAccountPaymentAmount,
-                                paymentDate, getPaymentTypeDto(), "");
-                        final AccountPaymentParametersDto normalLoanpayment = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), normalLoanAccount, normalLoanAccountPaymentAmount, paymentDate,
-                                getPaymentTypeDto(), "");
-                        final AccountPaymentParametersDto savingsPayment = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), savingsAccount, savingsAccountPaymentAmount, paymentDate,
-                                getPaymentTypeDto(), "");
-
-                        final List<InvalidPaymentReason> errors = getAccountService().validatePayment(
-                                cumulativePaymentAdvanceLoan);
-                        errors.addAll(getAccountService().validatePayment(cumulativePaymentNormalLoan));
-                        errors.addAll(getAccountService().validatePayment(cumulativePaymentSavings));
-
-                        checkPaymentErrors(errors, friendlyRowNum);
-
-                        pmts.add(advanceLoanPayment);
-                        pmts.add(normalLoanpayment);
-                        pmts.add(savingsPayment);
-                    } catch (Exception e) {
-                        /* catch row specific exception and continue for other rows */
-                        e.printStackTrace(System.err);
-                        errorsList.add(e + ". Input line number: " + friendlyRowNum);
+                    if (!isRowValid(row, friendlyRowNum, errorsList)) {
                         continue;
                     }
+
+                    Date transDate;
+                    try {
+                        transDate = getDate(row.getCell(TRANSACTION_DATE));
+                    } catch (Exception e) {
+                        errorsList.add("Date in Row " + friendlyRowNum
+                                + "  does not begin with expected format (YYYY-MM-DD), it contains "
+                                + row.getCell(TRANSACTION_DATE).getStringCellValue());
+                        continue;
+                    }
+
+                    final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
+
+                    String transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
+                    List<String> parameters = checkAndGetValues(transactionPartyDetails);
+
+                    String governmentId = parameters.get(0);
+                    List<String> loanPrds = new LinkedList<String>();
+                    String savingsProdSName = parameters.get(parameters.size() - 1);
+                    loanPrds.addAll(parameters.subList(1, parameters.size() - 1));
+
+                    checkBlank(governmentId, "Government ID", friendlyRowNum);
+                    checkBlank(savingsProdSName, "Savings product short name", friendlyRowNum);
+
+                    BigDecimal paidInAmount = BigDecimal.ZERO;
+
+                    // FIXME: possible data loss converting double to BigDecimal?
+                    paidInAmount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
+                    boolean cancelTransactionFlag = false;
+
+                    for (String loanPrd : loanPrds) {
+                        BigDecimal loanAccountPaymentAmount = BigDecimal.ZERO;
+                        BigDecimal loanAccountTotalDueAmount = BigDecimal.ZERO;
+                        final AccountReferenceDto loanAccountReference = getLoanAccount(governmentId, loanPrd,
+                                friendlyRowNum);
+                        loanAccountTotalDueAmount = getTotalPaymentDueAmount(loanAccountReference, friendlyRowNum);
+
+                        if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
+                            if (paidInAmount.compareTo(loanAccountTotalDueAmount) > 0) {
+                                loanAccountPaymentAmount = loanAccountTotalDueAmount;
+                                paidInAmount = paidInAmount.subtract(loanAccountTotalDueAmount);
+                            } else {
+                                loanAccountPaymentAmount = paidInAmount;
+                                paidInAmount = BigDecimal.ZERO;
+                            }
+                        } else {
+                            loanAccountPaymentAmount = BigDecimal.ZERO;
+                        }
+
+                        AccountPaymentParametersDto cumulativeLoanPayment = createPaymentParametersDto(
+                                loanAccountReference, loanAccountPaymentAmount, paymentDate);
+                        final AccountPaymentParametersDto loanPayment = new AccountPaymentParametersDto(
+                                getUserReferenceDto(), loanAccountReference, loanAccountPaymentAmount, paymentDate,
+                                getPaymentTypeDto(), "");
+
+                        if (!isPaymentValid(cumulativeLoanPayment, friendlyRowNum)) {
+                            cancelTransactionFlag = true;
+                            break;
+                        }
+                        pmts.add(loanPayment);
+                    }
+
+                    if (cancelTransactionFlag) {
+                        continue;
+                    }
+
+                    BigDecimal savingsAccDeposit;
+                    AccountReferenceDto savingsAcc;
+                    savingsAcc = getSavingsAccount(governmentId, savingsProdSName, friendlyRowNum, errorsList);
+
+                    if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        savingsAccDeposit = paidInAmount;
+                        paidInAmount = BigDecimal.ZERO;
+                    } else {
+                        savingsAccDeposit = BigDecimal.ZERO;
+                    }
+
+                    final AccountPaymentParametersDto cumulativePaymentSavings = createPaymentParametersDto(savingsAcc,
+                            savingsAccDeposit, paymentDate);
+                    final AccountPaymentParametersDto savingsAccPayment = new AccountPaymentParametersDto(
+                            getUserReferenceDto(), savingsAcc, savingsAccDeposit, paymentDate, getPaymentTypeDto(), "");
+
+                    if (!isPaymentValid(cumulativePaymentSavings, friendlyRowNum)) {
+                        continue;
+                    }
+
+                    pmts.add(savingsAccPayment);
+                } catch (Exception e) {
+                    /* catch row specific exception and continue for other rows */
+                    e.printStackTrace(System.err);
+                    errorsList.add(e + ". Input line number: " + friendlyRowNum);
+                    continue;
                 }
             }
         } catch (Exception e) {
@@ -221,6 +213,36 @@ public class MPesaXlsImporter extends StandardImport {
             e.printStackTrace(System.err);
         }
         return new ParseResultDto(errorsList, pmts);
+    }
+
+    /**
+     * Get the parameter list from transaction party details field or ImportTransactionOrder property. This method is
+     * executed after validation of input.
+     * 
+     * @param transactionPartyDetails
+     * @return list of parameters
+     */
+    protected List<String> checkAndGetValues(String transactionPartyDetails) {
+        List<String> parameters = new LinkedList<String>();
+        String[] result = transactionPartyDetails.split(" ");
+        parameters.addAll(Arrays.asList(result));
+        if (result.length == 1) {
+            if (getImportTransactionOrder() != null && !getImportTransactionOrder().isEmpty()) {
+                parameters.addAll(getImportTransactionOrder());
+            } else {
+                throw new MPesaXlsImporterException(
+                        "No Product name in \"Transaction Party Details\" field and ImportTransactionOrder property is not set");
+            }
+        }
+        return parameters;
+    }
+
+    private AccountPaymentParametersDto createPaymentParametersDto(final AccountReferenceDto accountReference,
+            final BigDecimal paymentAmount, final LocalDate paymentDate) {
+        BigDecimal totalPaymentAmountForAccount = addToRunningTotalForAccount(paymentAmount, cumulativeAmountByAccount,
+                accountReference);
+        return new AccountPaymentParametersDto(getUserReferenceDto(), accountReference, totalPaymentAmountForAccount,
+                paymentDate, getPaymentTypeDto(), "");
     }
 
     /**
@@ -236,7 +258,7 @@ public class MPesaXlsImporter extends StandardImport {
         setPaymentTypeDto(paymentType);
     }
 
-    private boolean isRowValid(final Row row, final int friendlyRowNum) {
+    private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) {
         String missingDataMsg = "Row " + friendlyRowNum + " is missing data: ";
         // TODO Auto-generated method stub
         if (row.getLastCellNum() < MAX_CELL_NUM) {
@@ -274,7 +296,10 @@ public class MPesaXlsImporter extends StandardImport {
         }
     }
 
-    private void checkPaymentErrors(final List<InvalidPaymentReason> errors, final int friendlyRowNum) {
+    private boolean isPaymentValid(final AccountPaymentParametersDto cumulativePayment, final int friendlyRowNum)
+            throws Exception {
+        final List<InvalidPaymentReason> errors = getAccountService().validatePayment(cumulativePayment);
+
         if (!errors.isEmpty()) {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
@@ -292,8 +317,9 @@ public class MPesaXlsImporter extends StandardImport {
                     break;
                 }
             }
+            return false;
         }
-
+        return true;
     }
 
     private BigDecimal getTotalPaymentDueAmount(final AccountReferenceDto advanceLoanAccount, final int friendlyRowNum) {
@@ -310,7 +336,7 @@ public class MPesaXlsImporter extends StandardImport {
     }
 
     private AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName,
-            final int friendlyRowNum) {
+            final int friendlyRowNum, List<String> errorsList) {
         AccountReferenceDto savingsAccount = null;
         try {
             savingsAccount = getAccountService()
@@ -350,22 +376,18 @@ public class MPesaXlsImporter extends StandardImport {
         }
     }
 
-    protected static final String DATE_FORMATE = "yyyy-MM-dd HH:mm:ss";
+    protected static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
     protected Date getDate(final Cell transDateCell) throws ParseException {
         Date date = null;
         if (transDateCell.getCellType() == Cell.CELL_TYPE_STRING) {
-            final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMATE, Locale.ENGLISH);
+            final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH);
             dateAsText.setLenient(false);
             date = dateAsText.parse(transDateCell.getStringCellValue());
         } else if (transDateCell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
             date = transDateCell.getDateCellValue();
         }
         return date;
-    }
-
-    protected String[] parseClientIdentifiers(final String stringCellValue) {
-        return stringCellValue.split(" ");
     }
 
     @Override
