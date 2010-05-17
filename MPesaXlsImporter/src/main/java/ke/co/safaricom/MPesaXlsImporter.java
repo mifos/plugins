@@ -105,9 +105,11 @@ public class MPesaXlsImporter extends StandardImport {
                             if (!status.equals(EXPECTED_STATUS)) {
                                 errorsList.add("Status in row " + friendlyRowNum + " is " + status + " instead of "
                                         + EXPECTED_STATUS);
+                                continue;
                             }
                         } else {
                             errorsList.add("Status in row " + friendlyRowNum + " is empty");
+                            continue;
                         }
 
                         final Cell detailsCell = row.getCell(TRANSACTION_PARTY_DETAILS);
@@ -357,5 +359,10 @@ public class MPesaXlsImporter extends StandardImport {
 
     String[] parseClientIdentifiers(String stringCellValue) {
         return stringCellValue.split(" ");
+    }
+
+    @Override
+    public int getNumberOfTransactionsPerRow() {
+        return 3;
     }
 }

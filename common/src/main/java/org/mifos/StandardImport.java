@@ -73,4 +73,9 @@ public abstract class StandardImport extends TransactionImport {
         getAccountService().makePayments(parse(input).getSuccessfullyParsedRows());
     }
 
+    @Override
+    public int getNumberOfTransactionsPerRow() {
+        return 1;
+    }
+
 }
