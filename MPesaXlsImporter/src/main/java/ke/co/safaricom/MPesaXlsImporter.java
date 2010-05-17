@@ -72,6 +72,7 @@ public class MPesaXlsImporter extends StandardImport {
         return "M-PESA Excel 97(-2007)";
     }
 
+    @SuppressWarnings("unchecked")
     protected List<String> getImportTransactionOrder() {
         if (importTransactionOrder == null) {
             importTransactionOrder = (List<String>) getAccountService().getMifosConfiguration("ImportTransactionOrder");
@@ -81,8 +82,6 @@ public class MPesaXlsImporter extends StandardImport {
         }
         return importTransactionOrder;
     }
-
-    
 
     @Override
     public ParseResultDto parse(final InputStream input) {
@@ -144,12 +143,14 @@ public class MPesaXlsImporter extends StandardImport {
                     paidInAmount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
                     boolean cancelTransactionFlag = false;
 
+                    List<AccountPaymentParametersDto> loanPaymentList = new ArrayList<AccountPaymentParametersDto>();
+
                     for (String loanPrd : loanPrds) {
                         BigDecimal loanAccountPaymentAmount = BigDecimal.ZERO;
                         BigDecimal loanAccountTotalDueAmount = BigDecimal.ZERO;
-                        final AccountReferenceDto loanAccountReference = getLoanAccount(governmentId, loanPrd,
-                                friendlyRowNum);
-                        loanAccountTotalDueAmount = getTotalPaymentDueAmount(loanAccountReference, friendlyRowNum);
+
+                        final AccountReferenceDto loanAccountReference = getLoanAccount(governmentId, loanPrd);
+                        loanAccountTotalDueAmount = getTotalPaymentDueAmount(loanAccountReference);
 
                         if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
                             if (paidInAmount.compareTo(loanAccountTotalDueAmount) > 0) {
@@ -165,15 +166,14 @@ public class MPesaXlsImporter extends StandardImport {
 
                         AccountPaymentParametersDto cumulativeLoanPayment = createPaymentParametersDto(
                                 loanAccountReference, loanAccountPaymentAmount, paymentDate);
-                        final AccountPaymentParametersDto loanPayment = new AccountPaymentParametersDto(
-                                getUserReferenceDto(), loanAccountReference, loanAccountPaymentAmount, paymentDate,
-                                getPaymentTypeDto(), "");
 
                         if (!isPaymentValid(cumulativeLoanPayment, friendlyRowNum)) {
                             cancelTransactionFlag = true;
                             break;
                         }
-                        pmts.add(loanPayment);
+                        loanPaymentList.add(new AccountPaymentParametersDto(getUserReferenceDto(),
+                                loanAccountReference, loanAccountPaymentAmount, paymentDate, getPaymentTypeDto(), ""));
+
                     }
 
                     if (cancelTransactionFlag) {
@@ -182,7 +182,7 @@ public class MPesaXlsImporter extends StandardImport {
 
                     BigDecimal savingsAccDeposit;
                     AccountReferenceDto savingsAcc;
-                    savingsAcc = getSavingsAccount(governmentId, savingsProdSName, friendlyRowNum, errorsList);
+                    savingsAcc = getSavingsAccount(governmentId, savingsProdSName);
 
                     if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
                         savingsAccDeposit = paidInAmount;
@@ -200,17 +200,21 @@ public class MPesaXlsImporter extends StandardImport {
                         continue;
                     }
 
+                    for (AccountPaymentParametersDto loanPayment : loanPaymentList) {
+                        pmts.add(loanPayment);
+                    }
                     pmts.add(savingsAccPayment);
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
-                    e.printStackTrace(System.err);
-                    errorsList.add(e + ". Input line number: " + friendlyRowNum);
+                    errorsList.add(e.getMessage() + ". Input line number: " + friendlyRowNum);
                     continue;
                 }
             }
         } catch (Exception e) {
             /* Catch any exception in the process */
             e.printStackTrace(System.err);
+            errorsList.add(e.getMessage() + ". Got error before reading rows");
+
         }
         return new ParseResultDto(errorsList, pmts);
     }
@@ -322,42 +326,21 @@ public class MPesaXlsImporter extends StandardImport {
         return true;
     }
 
-    private BigDecimal getTotalPaymentDueAmount(final AccountReferenceDto advanceLoanAccount, final int friendlyRowNum) {
-        BigDecimal totalPaymentDue = null;
-        try {
-            totalPaymentDue = getAccountService().getTotalPaymentDueAmount(advanceLoanAccount);
-        } catch (Exception e) {
-            errorsList.add("Error getting total payment due for row " + friendlyRowNum + ": " + e.getMessage());
-        }
-        if (totalPaymentDue == null) {
-            totalPaymentDue = BigDecimal.ZERO;
-        }
-        return totalPaymentDue;
+    private BigDecimal getTotalPaymentDueAmount(final AccountReferenceDto advanceLoanAccount) throws Exception {
+        return getAccountService().getTotalPaymentDueAmount(advanceLoanAccount);
+
     }
 
-    private AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName,
-            final int friendlyRowNum, List<String> errorsList) {
-        AccountReferenceDto savingsAccount = null;
-        try {
-            savingsAccount = getAccountService()
-                    .lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(governmentId,
-                            savingsProductShortName);
-        } catch (Exception e) {
-            errorsList.add("Error looking up account from row " + friendlyRowNum + ": " + e.getMessage());
-        }
-        return savingsAccount;
+    private AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName)
+            throws Exception {
+        return getAccountService().lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(
+                governmentId, savingsProductShortName);
     }
 
-    private AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName,
-            final int friendlyRowNum) {
-        AccountReferenceDto loanAccount = null;
-        try {
-            loanAccount = getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(
-                    governmentId, loanProductShortName);
-        } catch (Exception e) {
-            errorsList.add("Error looking up account from row " + friendlyRowNum + ": " + e.getMessage());
-        }
-        return loanAccount;
+    private AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName)
+            throws Exception {
+        return getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(
+                governmentId, loanProductShortName);
     }
 
     private void skipToTransactionData(final Iterator<Row> rowIterator) {
