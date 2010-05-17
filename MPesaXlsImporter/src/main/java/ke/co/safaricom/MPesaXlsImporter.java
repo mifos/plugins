@@ -113,11 +113,12 @@ public class MPesaXlsImporter extends StandardImport {
                     String status = null;
                     if (null != statusCell) {
                         status = statusCell.getStringCellValue().trim();
-
                         if (!status.equals(EXPECTED_STATUS)) {
                             errorsList.add("Status in row " + friendlyRowNum + " is " + status + " instead of "
                                     + EXPECTED_STATUS);
                         }
+                    } else {
+                        errorsList.add("No status in row " + friendlyRowNum);
                     }
 
                     final Cell detailsCell = row.getCell(TRANSACTION_PARTY_DETAILS);
