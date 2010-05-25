@@ -14,6 +14,10 @@
 	<classpathentry kind="src" path="MPesaXlsImporter/src/test/java"/>
 	<classpathentry kind="src" path="MPesaXlsImporter/src/test/resources"/>
 	<classpathentry kind="src" path="MPesaXlsImporter/src/main/resources"/>
+	<classpathentry kind="src" path="MPesaXlsLoanDisbursement/src/main/java"/>
+	<classpathentry kind="src" path="MPesaXlsLoanDisbursement/src/main/resources"/>
+	<classpathentry kind="src" path="MPesaXlsLoanDisbursement/src/test/java"/>
+	<classpathentry kind="src" path="MPesaXlsLoanDisbursement/src/test/resources"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.maven.ide.eclipse.MAVEN2_CLASSPATH_CONTAINER">
 		<accessrules>

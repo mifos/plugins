@@ -12,6 +12,7 @@
         <module>AudiBankTsvLoanPaymentImporter</module>
         <module>AudiBankXlsLoanPaymentImporter</module>
         <module>MPesaXlsImporter</module>
+        <module>MPesaXlsLoanDisbursement</module>
     </modules>
 
     <!-- Only mention our repository, following "open source" guidance at
