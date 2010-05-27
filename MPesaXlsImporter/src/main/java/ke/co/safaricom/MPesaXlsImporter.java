@@ -47,6 +47,7 @@ import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.spi.ParseResultDto;
 
 public class MPesaXlsImporter extends StandardImport {
+    private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA/ZAP";
     protected static final int RECEIPT = 0;
@@ -75,7 +76,10 @@ public class MPesaXlsImporter extends StandardImport {
     @SuppressWarnings("unchecked")
     protected List<String> getImportTransactionOrder() {
         if (importTransactionOrder == null) {
-            importTransactionOrder = (List<String>) getAccountService().getMifosConfiguration("ImportTransactionOrder");
+            final String importTransactionOrderKey = MPesaXlsImporter.class.getCanonicalName() + "."
+                    + IMPORT_TRANSACTION_ORDER;
+            importTransactionOrder = (List<String>) getAccountService()
+                    .getMifosConfiguration(importTransactionOrderKey);
             if (importTransactionOrder == null) {
                 importTransactionOrder = new ArrayList<String>();
             }
@@ -234,8 +238,8 @@ public class MPesaXlsImporter extends StandardImport {
             if (getImportTransactionOrder() != null && !getImportTransactionOrder().isEmpty()) {
                 parameters.addAll(getImportTransactionOrder());
             } else {
-                throw new MPesaXlsImporterException(
-                        "No Product name in \"Transaction Party Details\" field and ImportTransactionOrder property is not set");
+                throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
+                        + IMPORT_TRANSACTION_ORDER + " property is not set");
             }
         }
         return parameters;

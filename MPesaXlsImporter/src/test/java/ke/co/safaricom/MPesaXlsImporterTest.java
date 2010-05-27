@@ -88,7 +88,8 @@ public class MPesaXlsImporterTest {
         importTransactionOrder.add("ALA");
         importTransactionOrder.add("NLA");
         importTransactionOrder.add("SA");
-        when(accountService.getMifosConfiguration("ImportTransactionOrder")).thenReturn(importTransactionOrder);
+        when(accountService.getMifosConfiguration("ke.co.safaricom.MPesaXlsImporter.ImportTransactionOrder"))
+                .thenReturn(importTransactionOrder);
         when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(
                 BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
@@ -127,12 +128,14 @@ public class MPesaXlsImporterTest {
     @Test
     public void checkAndSetValuesSuccess() {
         List<String> parameters = concreteImporter.checkAndGetValues("GovID12 AL1 NL1 SA1");
+
         Assert.assertEquals("GovID12", parameters.get(0));
         Assert.assertEquals("AL1", parameters.get(1));
         Assert.assertEquals("NL1", parameters.get(2));
         Assert.assertEquals("SA1", parameters.get(3));
 
         parameters = concreteImporter.checkAndGetValues("GovID12");
+
         Assert.assertEquals("GovID12", parameters.get(0));
         Assert.assertEquals("ALA", parameters.get(1));
         Assert.assertEquals("NLA", parameters.get(2));
