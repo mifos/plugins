@@ -377,6 +377,12 @@ public class MPesaXlsImporter extends StandardImport {
         return date;
     }
 
+    /**
+     * M-PESA imports have multiple transactions per row. Two loan accounts and
+     * one savings account, I think.
+     * 
+     * See <a href="http://mifosforge.jira.com/browse/MIFOS-2909">MIFOS-2909</a>.
+     */
     @Override
     public int getNumberOfTransactionsPerRow() {
         return 3;
