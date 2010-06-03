@@ -67,6 +67,17 @@ public abstract class StandardImport extends TransactionImport {
         }
         return p;
     }
+    
+    public PaymentTypeDto findDisbursementType(String paymentTypeName) throws Exception {
+        PaymentTypeDto p = null;
+        List<PaymentTypeDto> supportedPaymentTypes = getAccountService().getLoanDisbursementTypes();
+        for (PaymentTypeDto t : supportedPaymentTypes) {
+            if (t.getName().contains(paymentTypeName)) {
+                p = t;
+            }
+        }
+        return p;
+    }
 
     @Override
     public void store(InputStream input) throws Exception {

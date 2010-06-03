@@ -47,7 +47,7 @@ import org.mifos.spi.ParseResultDto;
 
 public class MPesaXlsLoanDisbursement extends StandardImport {
     private static final String EXPECTED_STATUS = "Completed";
-    protected static final String PAYMENT_TYPE = "MPESA/ZAP";
+    protected static final String DISBURSE_TYPE = "MPESA/ZAP";
     protected static final int RECEIPT = 0;
     protected static final int TRANSACTION_DATE = 1;
     protected static final int DETAILS = 2;
@@ -69,7 +69,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
     public String getDisplayName() {
         return "M-PESA Disburse Loan Excel 97(-2007)";
     }
-    
+
     @Override
     public void store(InputStream input) throws Exception {
         getAccountService().disburseLoans(parse(input).getSuccessfullyParsedRows());
@@ -134,8 +134,6 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
                     AccountReferenceDto loanAcc;
                     loanAcc = getLoanAccount(governmentId, loanPrd);
 
-        
-
                     final AccountPaymentParametersDto cumulativePaymentSavings = createPaymentParametersDto(loanAcc,
                             withdrawnAmount, paymentDate);
                     final AccountPaymentParametersDto loanAccDisbursementPayment = new AccountPaymentParametersDto(
@@ -146,7 +144,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
                     }
 
                     pmts.add(loanAccDisbursementPayment);
-                    
+
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
                     errorsList.add(e.getMessage() + ". Input line number: " + friendlyRowNum);
@@ -174,11 +172,11 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
      * @throws Exception
      */
     private void setPaymentType() throws Exception {
-        final PaymentTypeDto paymentType = findPaymentType(PAYMENT_TYPE);
+        final PaymentTypeDto paymentType = findDisbursementType(DISBURSE_TYPE);
 
         if (paymentType == null) {
-            throw new MPesaXlsImporterException("Payment type " + PAYMENT_TYPE + " not found. Have you configured"
-                    + " this payment type?");
+            throw new MPesaXlsImporterException("Disbursement type " + DISBURSE_TYPE + " not found. Have you configured"
+                    + " this disbursement type?");
         }
         setPaymentTypeDto(paymentType);
     }
@@ -200,7 +198,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
         if (null == row.getCell(WITHDRAWN)) {
             errorsList.add(missingDataMsg + "\"Withdrawn\" field is empty.");
             return false;
-        } 
+        }
         if (row.getCell(STATUS) == null) {
             errorsList.add(missingDataMsg + "Status field is empty");
             return false;
@@ -245,7 +243,6 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
         }
         return true;
     }
-
 
     private AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName)
             throws Exception {

@@ -77,10 +77,10 @@ public class MPesaXlsLoanDisbursementTest {
         when( accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
                         anyString())).thenReturn(account);
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
-        when(paymentTypeDto.getName()).thenReturn(MPesaXlsLoanDisbursement.PAYMENT_TYPE);
-        List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
-        paymentTypeList.add(paymentTypeDto);
-        when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
+        when(paymentTypeDto.getName()).thenReturn(MPesaXlsLoanDisbursement.DISBURSE_TYPE);
+        List<PaymentTypeDto> disbursementTypeList = new ArrayList<PaymentTypeDto>();
+        disbursementTypeList.add(paymentTypeDto);
+        when(accountService.getLoanDisbursementTypes()).thenReturn(disbursementTypeList);
         concreteImporter = new MPesaXlsLoanDisbursement();
         transactionImport = concreteImporter;
         transactionImport.setAccountService(accountService);
