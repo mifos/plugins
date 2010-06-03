@@ -26,12 +26,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -61,10 +59,6 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
     protected static final int TRANSACTION_PARTY_DETAILS = 10;
     protected static final int MAX_CELL_NUM = 11;
 
-    private static Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount;
-    private static List<AccountPaymentParametersDto> pmts;
-    private static List<String> errorsList;
-
     @Override
     public String getDisplayName() {
         return "M-PESA Disburse Loan Excel 97(-2007)";
@@ -77,9 +71,8 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
     @Override
     public ParseResultDto parse(final InputStream input) {
-        cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
-        pmts = new ArrayList<AccountPaymentParametersDto>();
-        errorsList = new LinkedList<String>();
+        final List<AccountPaymentParametersDto> pmts = new ArrayList<AccountPaymentParametersDto>();
+        final List<String> errorsList = new LinkedList<String>();
 
         try {
             final Iterator<Row> rowIterator = new HSSFWorkbook(input).getSheetAt(0).iterator();
@@ -88,13 +81,13 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
             setPaymentType();
 
-            skipToTransactionData(rowIterator);
+            skipToTransactionData(rowIterator, errorsList);
 
             if (!errorsList.isEmpty()) {
                 return new ParseResultDto(errorsList, pmts);
             }
 
-            /* Parse transaction data */
+            /* Parse loan disbursals */
 
             while (rowIterator.hasNext()) {
                 try {
@@ -118,28 +111,22 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
 
-                    String transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
-
-                    String governmentId = transactionPartyDetails.split(" ")[0];
-                    String loanPrd = transactionPartyDetails.split(" ")[1];
-
-                    checkBlank(governmentId, "Government ID", friendlyRowNum);
-                    checkBlank(loanPrd, "loan product short name", friendlyRowNum);
-
-                    BigDecimal withdrawnAmount = BigDecimal.ZERO;
+                    final String accountId = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
 
                     // FIXME: possible data loss converting double to BigDecimal?
-                    withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
+                    final BigDecimal withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
 
-                    AccountReferenceDto loanAcc;
-                    loanAcc = getLoanAccount(governmentId, loanPrd);
+                    if (StringUtils.isBlank(accountId)) {
+                        errorsList.add("Loan account ID could not be extracted from row " + friendlyRowNum);
+                    }
 
-                    final AccountPaymentParametersDto cumulativePaymentSavings = createPaymentParametersDto(loanAcc,
-                            withdrawnAmount, paymentDate);
+                    final AccountReferenceDto account = getAccountService()
+                            .lookupLoanAccountReferenceFromGlobalAccountNumber(accountId);
+
                     final AccountPaymentParametersDto loanAccDisbursementPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), loanAcc, withdrawnAmount, paymentDate, getPaymentTypeDto(), "");
+                            getUserReferenceDto(), account, withdrawnAmount, paymentDate, getPaymentTypeDto(), "");
 
-                    if (!isPaymentValid(cumulativePaymentSavings, friendlyRowNum)) {
+                    if (!isPaymentValid(loanAccDisbursementPayment, friendlyRowNum, errorsList)) {
                         continue;
                     }
 
@@ -160,23 +147,12 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
         return new ParseResultDto(errorsList, pmts);
     }
 
-    private AccountPaymentParametersDto createPaymentParametersDto(final AccountReferenceDto accountReference,
-            final BigDecimal paymentAmount, final LocalDate paymentDate) {
-        BigDecimal totalPaymentAmountForAccount = addToRunningTotalForAccount(paymentAmount, cumulativeAmountByAccount,
-                accountReference);
-        return new AccountPaymentParametersDto(getUserReferenceDto(), accountReference, totalPaymentAmountForAccount,
-                paymentDate, getPaymentTypeDto(), "");
-    }
-
-    /**
-     * @throws Exception
-     */
     private void setPaymentType() throws Exception {
         final PaymentTypeDto paymentType = findDisbursementType(DISBURSE_TYPE);
 
         if (paymentType == null) {
-            throw new MPesaXlsImporterException("Disbursement type " + DISBURSE_TYPE + " not found. Have you configured"
-                    + " this disbursement type?");
+            throw new MPesaXlsLoanDisbursementException("Disbursement type " + DISBURSE_TYPE
+                    + " not found. Have you configured" + " this disbursement type?");
         }
         setPaymentTypeDto(paymentType);
     }
@@ -212,14 +188,8 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
         return true;
     }
 
-    private void checkBlank(final String value, final String name, final int friendlyRowNum) {
-        if (StringUtils.isBlank(value)) {
-            errorsList.add(name + " could not be extracted from row " + friendlyRowNum);
-        }
-    }
-
-    private boolean isPaymentValid(final AccountPaymentParametersDto cumulativePayment, final int friendlyRowNum)
-            throws Exception {
+    private boolean isPaymentValid(final AccountPaymentParametersDto cumulativePayment, final int friendlyRowNum,
+            List<String> errorsList) throws Exception {
         final List<InvalidPaymentReason> errors = getAccountService().validateLoanDisbursement(cumulativePayment);
 
         if (!errors.isEmpty()) {
@@ -244,13 +214,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
         return true;
     }
 
-    private AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName)
-            throws Exception {
-        return getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(
-                governmentId, loanProductShortName);
-    }
-
-    private void skipToTransactionData(final Iterator<Row> rowIterator) {
+    private void skipToTransactionData(final Iterator<Row> rowIterator, List<String> errorsList) {
         boolean skippingRowsBeforeTransactionData = true;
         while (errorsList.isEmpty() && skippingRowsBeforeTransactionData) {
             if (!rowIterator.hasNext()) {
@@ -282,14 +246,14 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
     @Override
     public int getNumberOfTransactionsPerRow() {
-        return 3;
+        return 1;
     }
 
-    class MPesaXlsImporterException extends RuntimeException {
+    class MPesaXlsLoanDisbursementException extends RuntimeException {
 
         private static final long serialVersionUID = 731436914098659043L;
 
-        MPesaXlsImporterException(final String msg) {
+        MPesaXlsLoanDisbursementException(final String msg) {
             super(msg);
         }
 

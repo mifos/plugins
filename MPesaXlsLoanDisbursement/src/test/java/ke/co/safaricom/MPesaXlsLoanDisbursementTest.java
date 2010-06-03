@@ -74,8 +74,7 @@ public class MPesaXlsLoanDisbursementTest {
     @Before
     public void setUpBeforeMethod() throws Exception {
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
-        when( accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(),
-                        anyString())).thenReturn(account);
+        when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(account);
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn(MPesaXlsLoanDisbursement.DISBURSE_TYPE);
         List<PaymentTypeDto> disbursementTypeList = new ArrayList<PaymentTypeDto>();
