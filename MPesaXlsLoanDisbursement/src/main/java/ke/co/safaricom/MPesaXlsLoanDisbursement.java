@@ -204,6 +204,13 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
                 case INVALID_PAYMENT_AMOUNT:
                     errorsList.add("Invalid payment amount in row " + friendlyRowNum);
                     break;
+                case INVALID_LOAN_DISBURSAL_AMOUNT:
+                    errorsList.add("The 'Withdrawn' amount must match the full loan amount,"
+                            + " but this was not true for row " + friendlyRowNum);
+                    break;
+                case INVALID_LOAN_STATE:
+                    errorsList.add("Loan in row " + friendlyRowNum + " is not in a valid state to be disbursed.");
+                    break;
                 default:
                     errorsList.add("Invalid payment in row " + friendlyRowNum + " (reason unknown).");
                     break;
