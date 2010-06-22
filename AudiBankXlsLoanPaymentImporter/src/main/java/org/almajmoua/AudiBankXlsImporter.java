@@ -223,7 +223,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                             case INVALID_PAYMENT_AMOUNT:
                                 errorsList.add("Invalid payment amount in row " + friendlyRowNum);
                                 break;
-                            case INVALID_ACCOUNT_STATE:
+                            case INVALID_LOAN_STATE:
                                 errorsList.add("Invalid account state in row " + friendlyRowNum);
                                 break;
                             default:
