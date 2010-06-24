@@ -192,6 +192,9 @@ public class AudiBankTsvImporter extends AudiBankImporter {
                             case INVALID_PAYMENT_AMOUNT:
                                 errorsList.add("Invalid payment amount in row " + linesRead);
                                 break;
+                            case INVALID_LOAN_STATE:
+                                errorsList.add("Invalid account state in row " + friendlyRowNum);
+                                break;
                             default:
                                 errorsList.add("Invalid payment in row " + linesRead + " (reason unknown).");
                                 break;

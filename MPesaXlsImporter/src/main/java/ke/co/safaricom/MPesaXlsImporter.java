@@ -320,6 +320,9 @@ public class MPesaXlsImporter extends StandardImport {
                 case INVALID_PAYMENT_AMOUNT:
                     errorsList.add("Invalid payment amount in row " + friendlyRowNum);
                     break;
+                case INVALID_LOAN_STATE:
+                    errorsList.add("Invalid account state in row " + friendlyRowNum);
+                    break;
                 default:
                     errorsList.add("Invalid payment in row " + friendlyRowNum + " (reason unknown).");
                     break;
