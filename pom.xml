@@ -9,7 +9,6 @@
 
     <modules>
         <module>common</module>
-        <module>AudiBankTsvLoanPaymentImporter</module>
         <module>AudiBankXlsLoanPaymentImporter</module>
         <module>MPesaXlsImporter</module>
         <module>MPesaXlsLoanDisbursement</module>
