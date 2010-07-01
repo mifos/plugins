@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/classes" path="AudiBankXlsLoanPaymentImporter/src/test/java"/>
-	<classpathentry kind="src" output="AudiBankTsvLoanPaymentImporter/target/classes" path="AudiBankTsvLoanPaymentImporter/src/test/java"/>
-	<classpathentry kind="src" output="AudiBankTsvLoanPaymentImporter/target/test-classes" path="AudiBankTsvLoanPaymentImporter/src/main/resources"/>
-	<classpathentry kind="src" output="AudiBankTsvLoanPaymentImporter/target/test-classes" path="AudiBankTsvLoanPaymentImporter/src/test/resources"/>
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/test-classes" path="AudiBankXlsLoanPaymentImporter/src/test/resources"/>
-	<classpathentry kind="src" output="AudiBankTsvLoanPaymentImporter/target/classes" path="AudiBankTsvLoanPaymentImporter/src/main/java"/>
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/test-classes" path="AudiBankXlsLoanPaymentImporter/src/main/resources"/>
 	<classpathentry kind="src" output="AudiBankXlsLoanPaymentImporter/target/classes" path="AudiBankXlsLoanPaymentImporter/src/main/java"/>
 	<classpathentry kind="src" path="common/src/main/java"/>
