@@ -210,19 +210,19 @@ public class MPesaXlsImporter extends StandardImport {
                     }
 
                     BigDecimal lastInOrderAmount;
-                    AccountReferenceDto lastInTheOrderAcc;
-                    lastInTheOrderAcc = getSavingsAccount(governmentId, lastInTheOrderProdSName);
+                    AccountReferenceDto lastInOrderAcc;
+                    lastInOrderAcc = getSavingsAccount(governmentId, lastInTheOrderProdSName);
                     
-                    if(lastInTheOrderAcc == null) {
-                        lastInTheOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
-                        if(lastInTheOrderAcc != null && !(paidInAmount.compareTo(getTotalPaymentDueAmount(lastInTheOrderAcc))==0)) {
+                    if(lastInOrderAcc == null) {
+                        lastInOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
+                        if(lastInOrderAcc != null && !(paidInAmount.compareTo(getTotalPaymentDueAmount(lastInOrderAcc))==0)) {
                             errorsList.add("Last account is a laon account but the total payment amount is less than amount paid in. Input line number: "+ friendlyRowNum);
                             continue;  
                         }
                     }
                     
-                    if(lastInTheOrderAcc == null) {
-                        errorsList.add("No acccount found" + friendlyRowNum);
+                    if(lastInOrderAcc == null) {
+                        errorsList.add("No acccount found. Input line number: " + friendlyRowNum);
                         continue;
                     }
 
@@ -233,10 +233,10 @@ public class MPesaXlsImporter extends StandardImport {
                         lastInOrderAmount = BigDecimal.ZERO;
                     }
                     
-                    final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInTheOrderAcc,
+                    final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
                     final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), lastInTheOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "");
+                            getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "");
 
                     if (!isPaymentValid(cumulativePaymentlastAcc, friendlyRowNum)) {
                         continue;
