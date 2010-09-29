@@ -38,6 +38,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
@@ -94,6 +95,14 @@ public class MPesaXlsImporter extends StandardImport {
         }
         return importTransactionOrder;
     }
+    
+    private String cellStringValue(Cell cell) {
+    	if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+    		return Double.toString(cell.getNumericCellValue());
+    	} else {
+    		return cell.getStringCellValue();
+    	}
+    }
 
     @Override
     public ParseResultDto parse(final InputStream input) {
@@ -126,6 +135,8 @@ public class MPesaXlsImporter extends StandardImport {
                     if (!isRowValid(row, friendlyRowNum, errorsList)) {
                         continue;
                     }
+                    
+                    String receipt = cellStringValue(row.getCell(RECEIPT));
 
                     Date transDate;
                     try {
@@ -201,7 +212,7 @@ public class MPesaXlsImporter extends StandardImport {
                             break;
                         }
                         loanPaymentList.add(new AccountPaymentParametersDto(getUserReferenceDto(),
-                                loanAccountReference, loanAccountPaymentAmount, paymentDate, getPaymentTypeDto(), ""));
+                                loanAccountReference, loanAccountPaymentAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt));
 
                     }
 
@@ -214,11 +225,14 @@ public class MPesaXlsImporter extends StandardImport {
                     lastInOrderAcc = getSavingsAccount(governmentId, lastInTheOrderProdSName);
                     
                     if(lastInOrderAcc == null) {
-                        lastInOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
-                        if(lastInOrderAcc != null && !(paidInAmount.compareTo(getTotalPaymentDueAmount(lastInOrderAcc))==0)) {
-                            errorsList.add("Last account is a laon account but the total payment amount is less than amount paid in. Input line number: "+ friendlyRowNum);
-                            continue;  
-                        }
+                    	lastInOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
+                    	if (lastInOrderAcc != null) {
+                    		BigDecimal totalPaymentDueAmount = getTotalPaymentDueAmount(lastInOrderAcc);
+                    		if(paidInAmount.compareTo(totalPaymentDueAmount) != 0) {
+                    			errorsList.add("Last account is a laon account but the total payment amount is less than amount paid in. Input line number: "+ friendlyRowNum);
+                    			continue;  
+                    		}
+                    	}
                     }
                     
                     if(lastInOrderAcc == null) {
@@ -236,7 +250,7 @@ public class MPesaXlsImporter extends StandardImport {
                     final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
                     final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "");
+                            getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt);
 
                     if (!isPaymentValid(cumulativePaymentlastAcc, friendlyRowNum)) {
                         continue;
@@ -254,7 +268,7 @@ public class MPesaXlsImporter extends StandardImport {
             }
         } catch (Exception e) {
             /* Catch any exception in the process */
-            e.printStackTrace(System.err);
+            e.printStackTrace();
             errorsList.add(e.getMessage() + ". Got error before reading rows");
 
         }
@@ -305,9 +319,8 @@ public class MPesaXlsImporter extends StandardImport {
         setPaymentTypeDto(paymentType);
     }
 
-    private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) {
+    private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) throws Exception {
         String missingDataMsg = "Row " + friendlyRowNum + " is missing data: ";
-        // TODO Auto-generated method stub
         if (row.getLastCellNum() < MAX_CELL_NUM) {
             errorsList.add(missingDataMsg + "not enough fields.");
             return false;
@@ -327,11 +340,21 @@ public class MPesaXlsImporter extends StandardImport {
         if (row.getCell(STATUS) == null) {
             errorsList.add(missingDataMsg + "Status field is empty");
             return false;
-        } else {
+        }
+        else {
             if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
                 errorsList.add("Status in row " + friendlyRowNum + " is " + row.getCell(STATUS) + " instead of "
                         + EXPECTED_STATUS);
                 return false;
+            }
+            
+            String receiptNumber = cellStringValue(row.getCell(RECEIPT));
+			if (receiptNumber != null && !receiptNumber.isEmpty()) {
+            	if (getAccountService().receiptExists(receiptNumber)) {
+            		errorsList.add(String.format("Row <%d> error - %s - Transactions with same Receipt ID have already been imported",
+            				friendlyRowNum, receiptNumber));
+            		return false;
+            	}
             }
         }
         return true;
