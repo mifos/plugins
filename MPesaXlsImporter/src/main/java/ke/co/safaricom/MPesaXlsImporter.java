@@ -103,6 +103,28 @@ public class MPesaXlsImporter extends StandardImport {
     		return cell.getStringCellValue();
     	}
     }
+    
+    private String formatErrorMessage(Row row, String message) {
+    	if (row == null) {
+    		return String.format("Error - %s", message);
+    	}
+    	if (row.getCell(RECEIPT) == null) {
+    		return String.format("Row <%d> error - %s",
+        			row.getRowNum() + 1,
+        			message);
+    	}
+    	return String.format("Row <%d> error - %s - %s",
+    			row.getRowNum() + 1,
+    			cellStringValue(row.getCell(RECEIPT)),
+    			message);
+    }
+    
+    private String formatIgnoredErrorMessage(Row row, String message) {
+    	return String.format("Row <%d> ignored - %s - %s",
+    			row.getRowNum() + 1,
+    			cellStringValue(row.getCell(RECEIPT)),
+    			message);
+    }
 
     @Override
     public ParseResultDto parse(final InputStream input) {
@@ -114,7 +136,7 @@ public class MPesaXlsImporter extends StandardImport {
         try {
             final Iterator<Row> rowIterator = new HSSFWorkbook(input).getSheetAt(0).iterator();
             int friendlyRowNum = 0;
-            Row row;
+            Row row = null;
 
             setPaymentType();
 
@@ -142,9 +164,7 @@ public class MPesaXlsImporter extends StandardImport {
                     try {
                         transDate = getDate(row.getCell(TRANSACTION_DATE));
                     } catch (Exception e) {
-                        errorsList.add("Date in Row " + friendlyRowNum
-                                + "  does not begin with expected format (YYYY-MM-DD), it contains "
-                                + row.getCell(TRANSACTION_DATE).getStringCellValue());
+                        errorsList.add(formatErrorMessage(row, "Date does not begin with expected format (YYYY-MM-DD)"));
                         continue;
                     }
 
@@ -168,8 +188,8 @@ public class MPesaXlsImporter extends StandardImport {
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
                     loanPrds.addAll(parameters.subList(1, parameters.size() - 1));
 
-                    checkBlank(governmentId, "Government ID", friendlyRowNum);
-                    checkBlank(lastInTheOrderProdSName, "Savings product short name", friendlyRowNum);
+                    checkBlank(governmentId, "Government ID", row);
+                    checkBlank(lastInTheOrderProdSName, "Savings product short name", row);
 
                     BigDecimal paidInAmount = BigDecimal.ZERO;
 
@@ -207,7 +227,7 @@ public class MPesaXlsImporter extends StandardImport {
                         AccountPaymentParametersDto cumulativeLoanPayment = createPaymentParametersDto(
                                 loanAccountReference, loanAccountPaymentAmount, paymentDate);
 
-                        if (!isPaymentValid(cumulativeLoanPayment, friendlyRowNum)) {
+                        if (!isPaymentValid(cumulativeLoanPayment, row)) {
                             cancelTransactionFlag = true;
                             break;
                         }
@@ -236,7 +256,7 @@ public class MPesaXlsImporter extends StandardImport {
                     }
                     
                     if(lastInOrderAcc == null) {
-                        errorsList.add("No acccount found. Input line number: " + friendlyRowNum);
+                        errorsList.add(formatErrorMessage(row, "No account found"));
                         continue;
                     }
 
@@ -252,7 +272,7 @@ public class MPesaXlsImporter extends StandardImport {
                     final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
                             getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt);
 
-                    if (!isPaymentValid(cumulativePaymentlastAcc, friendlyRowNum)) {
+                    if (!isPaymentValid(cumulativePaymentlastAcc, row)) {
                         continue;
                     }
                     successfullyParsedRows+=1;
@@ -262,7 +282,8 @@ public class MPesaXlsImporter extends StandardImport {
                     pmts.add(lastInTheOrderAccPayment);
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
-                    errorsList.add(e.getMessage() + ". Input line number: " + friendlyRowNum);
+                	e.printStackTrace();
+                    errorsList.add(formatErrorMessage(row, e.getMessage()));
                     continue;
                 }
             }
@@ -320,39 +341,36 @@ public class MPesaXlsImporter extends StandardImport {
     }
 
     private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) throws Exception {
-        String missingDataMsg = "Row " + friendlyRowNum + " is missing data: ";
-        if (row.getLastCellNum() < MAX_CELL_NUM) {
-            errorsList.add(missingDataMsg + "not enough fields.");
+    	if (row.getLastCellNum() < MAX_CELL_NUM) {
+            errorsList.add(formatErrorMessage(row, "Missing required data"));
             return false;
         }
+    	if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
+    		errorsList.add(formatIgnoredErrorMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed"));
+    		return false;
+    	}
+    	
         if (null == row.getCell(TRANSACTION_DATE)) {
-            errorsList.add(missingDataMsg + "Date field is empty.");
+            errorsList.add(formatErrorMessage(row, "Date field is empty"));
             return false;
         }
         if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
-            errorsList.add(missingDataMsg + "\"Transaction party details\" field is empty.");
+            errorsList.add(formatErrorMessage(row, "\"Transaction party details\" field is empty."));
             return false;
         }
         if (null == row.getCell(PAID_IN)) {
-            errorsList.add(missingDataMsg + "\"Paid in\" field is empty.");
+            errorsList.add(formatErrorMessage(row, "\"Paid in\" field is empty."));
             return false;
         }
         if (row.getCell(STATUS) == null) {
-            errorsList.add(missingDataMsg + "Status field is empty");
+            errorsList.add(formatErrorMessage(row, "Status field is empty"));
             return false;
         }
         else {
-            if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
-                errorsList.add("Status in row " + friendlyRowNum + " is " + row.getCell(STATUS) + " instead of "
-                        + EXPECTED_STATUS);
-                return false;
-            }
-            
             String receiptNumber = cellStringValue(row.getCell(RECEIPT));
 			if (receiptNumber != null && !receiptNumber.isEmpty()) {
             	if (getAccountService().receiptExists(receiptNumber)) {
-            		errorsList.add(String.format("Row <%d> error - %s - Transactions with same Receipt ID have already been imported",
-            				friendlyRowNum, receiptNumber));
+            		errorsList.add(formatErrorMessage(row, "Transactions with same Receipt ID have already been imported"));
             		return false;
             	}
             }
@@ -360,13 +378,13 @@ public class MPesaXlsImporter extends StandardImport {
         return true;
     }
 
-    private void checkBlank(final String value, final String name, final int friendlyRowNum) {
+    private void checkBlank(final String value, final String name, final Row row) {
         if (StringUtils.isBlank(value)) {
-            errorsList.add(name + " could not be extracted from row " + friendlyRowNum);
+            errorsList.add(formatErrorMessage(row, name + " could not be extracted"));
         }
     }
 
-    private boolean isPaymentValid(final AccountPaymentParametersDto cumulativePayment, final int friendlyRowNum)
+    private boolean isPaymentValid(final AccountPaymentParametersDto cumulativePayment, final Row row)
             throws Exception {
         final List<InvalidPaymentReason> errors = getAccountService().validatePayment(cumulativePayment);
 
@@ -374,19 +392,19 @@ public class MPesaXlsImporter extends StandardImport {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
                 case INVALID_DATE:
-                    errorsList.add("Invalid transaction date in row " + friendlyRowNum);
+                    errorsList.add(formatErrorMessage(row, "Invalid transaction date"));
                     break;
                 case UNSUPPORTED_PAYMENT_TYPE:
-                    errorsList.add("Unsupported payment type in row " + friendlyRowNum);
+                    errorsList.add(formatErrorMessage(row, "Unsupported payment type"));
                     break;
                 case INVALID_PAYMENT_AMOUNT:
-                    errorsList.add("Invalid payment amount in row " + friendlyRowNum);
+                    errorsList.add(formatErrorMessage(row, "Invalid payment amount"));
                     break;
                 case INVALID_LOAN_STATE:
-                    errorsList.add("Invalid account state in row " + friendlyRowNum);
+                    errorsList.add(formatErrorMessage(row, "Invalid account state"));
                     break;
                 default:
-                    errorsList.add("Invalid payment in row " + friendlyRowNum + " (reason unknown).");
+                    errorsList.add(formatErrorMessage(row, "Invalid payment (reason unknown)"));
                     break;
                 }
             }
