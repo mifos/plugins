@@ -21,9 +21,15 @@
 package org.example;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
+
+import org.mifos.accounts.api.AccountPaymentParametersDto;
+import org.mifos.accounts.api.AccountService;
+import org.mifos.accounts.api.UserReferenceDto;
 import org.mifos.spi.TransactionImport;
 import org.mifos.spi.ParseResultDto;
 
@@ -45,6 +51,8 @@ public class GroovyPluginRunner extends TransactionImport {
             gse.run("examplePlugin.groovy", binding);
         } catch (Exception e) {
             e.printStackTrace(System.err);
+            return new ParseResultDto(Arrays.asList(new String[] { "error running Groovy: " + e.getMessage() }),
+                    new ArrayList<AccountPaymentParametersDto>());
         }
         return (ParseResultDto) binding.getVariable("parseResultDto");
     }
@@ -52,5 +60,15 @@ public class GroovyPluginRunner extends TransactionImport {
     @Override
     public void store(InputStream input) throws Exception {
         getAccountService().makePayments(parse(input).getSuccessfullyParsedPayments());
+    }
+
+    @Override
+    public UserReferenceDto getUserReferenceDto() {
+        return super.getUserReferenceDto();
+    }
+
+    @Override
+    public AccountService getAccountService() {
+        return super.getAccountService();
     }
 }
