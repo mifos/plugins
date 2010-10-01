@@ -20,7 +20,10 @@
 
 package ke.co.safaricom;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -33,11 +36,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
@@ -126,6 +131,10 @@ public class MPesaXlsImporter extends StandardImport {
     			message);
     }
 
+    private ByteArrayInputStream copyInputIntoByteInput(InputStream input) throws IOException {
+        return new ByteArrayInputStream(IOUtils.toByteArray(input));
+    }
+
     @Override
     public ParseResultDto parse(final InputStream input) {
         cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
@@ -134,7 +143,20 @@ public class MPesaXlsImporter extends StandardImport {
         successfullyParsedRows = 0;
 
         try {
-            final Iterator<Row> rowIterator = new HSSFWorkbook(input).getSheetAt(0).iterator();
+            Iterator<Row> rowIterator = null;
+            // Copy input into byte input to try two implementations of POI parsers: HSSF and XSSF (XML formats)
+            ByteArrayInputStream copiedInput = copyInputIntoByteInput(input);
+            copiedInput.mark(0);
+            try {
+                rowIterator = new HSSFWorkbook(copiedInput).getSheetAt(0).iterator();
+            } catch (Exception e) {
+                copiedInput.reset();
+                try {
+                    rowIterator = new XSSFWorkbook(copiedInput).getSheetAt(0).iterator();
+                } catch (Exception e2) {
+                    throw new MPesaXlsImporterException("Unknown file format. Supported file formats are: XLS (from Excel 2003 or older), XLSX");
+                }
+            }
             int friendlyRowNum = 0;
             Row row = null;
 
