@@ -46,7 +46,7 @@ public class GroovyPluginRunner extends TransactionImport {
         Binding binding = new Binding();
         try {
             GroovyScriptEngine gse = new GroovyScriptEngine(roots);
-            binding.setVariable("input", input);
+            binding.setVariable("rawInput", input);
             binding.setVariable("parent", this);
             gse.run("examplePlugin.groovy", binding);
         } catch (Exception e) {

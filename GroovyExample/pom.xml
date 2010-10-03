@@ -91,5 +91,25 @@
             <artifactId>groovy</artifactId>
             <version>1.7.4</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mifos</groupId>
+            <artifactId>mifos-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>
