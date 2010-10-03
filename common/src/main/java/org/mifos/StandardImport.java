@@ -63,6 +63,7 @@ public abstract class StandardImport extends TransactionImport {
         for (PaymentTypeDto t : supportedPaymentTypes) {
             if (t.getName().contains(paymentTypeName)) {
                 p = t;
+                break;
             }
         }
         return p;
@@ -74,6 +75,7 @@ public abstract class StandardImport extends TransactionImport {
         for (PaymentTypeDto t : supportedPaymentTypes) {
             if (t.getName().contains(paymentTypeName)) {
                 p = t;
+                break;
             }
         }
         return p;
