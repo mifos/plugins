@@ -48,6 +48,7 @@ import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
 import org.mifos.accounts.api.AccountReferenceDto;
+import org.mifos.accounts.api.CustomerDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.spi.ParseResultDto;
@@ -135,6 +136,28 @@ public class MPesaXlsImporter extends StandardImport {
         return new ByteArrayInputStream(IOUtils.toByteArray(input));
     }
 
+    private String getPhoneNumberCandidate(Row row) {
+	String cellContents = cellStringValue(row.getCell(OTHER_PARTY_INFO));
+	String[] splitted = cellContents.split(" ");
+	if (splitted == null || splitted.length == 0)
+	    return null;
+	return splitted[0];
+    }
+
+    private void validatePhoneNumber(Row row) {
+	String phoneNumber = getPhoneNumberCandidate(row);
+	if (phoneNumber == null)
+	    return;
+	List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
+	if (customers == null || customers.isEmpty()) {
+	    errorsList.add(formatErrorMessage(row,
+				String.format("Client with mobile number %s was not found", phoneNumber)));
+	} else if (customers.size() >= 2) {
+	   errorsList.add(formatErrorMessage(row,
+				String.format("More than 1 client with mobile number %s was found", phoneNumber)));
+	}
+    }
+
     @Override
     public ParseResultDto parse(final InputStream input) {
         cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
@@ -189,6 +212,8 @@ public class MPesaXlsImporter extends StandardImport {
                         errorsList.add(formatErrorMessage(row, "Date does not begin with expected format (YYYY-MM-DD)"));
                         continue;
                     }
+
+		    validatePhoneNumber(row);
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
                     String transactionPartyDetails = null;
