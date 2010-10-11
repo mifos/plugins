@@ -65,6 +65,7 @@ public class MPesaXlsImporter extends StandardImport {
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA/ZAP";
+    protected static final String EXPECTED_TRANSACTION_TYPE = "Pay Utility";
     protected static final int RECEIPT = 0;
     protected static final int TRANSACTION_DATE = 1;
     protected static final int DETAILS = 2;
@@ -394,6 +395,11 @@ public class MPesaXlsImporter extends StandardImport {
         }
     	if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
     		errorsList.add(formatIgnoredErrorMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed"));
+    		return false;
+    	}
+	if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(EXPECTED_TRANSACTION_TYPE)) {
+    		errorsList.add(formatIgnoredErrorMessage(row, "Transaction type " + row.getCell(TRANSACTION_TYPE) +
+			" instead of " + EXPECTED_TRANSACTION_TYPE));
     		return false;
     	}
     	
