@@ -145,18 +145,24 @@ public class MPesaXlsImporter extends StandardImport {
 	return splitted[0];
     }
 
-    private void validatePhoneNumber(Row row) {
+    /**
+     * Returns validated phone number or null if there is no valid phone number in the row
+     */
+    private String validatePhoneNumber(Row row) {
 	String phoneNumber = getPhoneNumberCandidate(row);
 	if (phoneNumber == null)
-	    return;
+	    return null;
 	List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
 	if (customers == null || customers.isEmpty()) {
 	    errorsList.add(formatErrorMessage(row,
 				String.format("Client with mobile number %s was not found", phoneNumber)));
+	    return null;
 	} else if (customers.size() >= 2) {
 	   errorsList.add(formatErrorMessage(row,
 				String.format("More than 1 client with mobile number %s was found", phoneNumber)));
+	   return null;
 	}
+	return phoneNumber;
     }
 
     @Override
@@ -214,7 +220,9 @@ public class MPesaXlsImporter extends StandardImport {
                         continue;
                     }
 
-		    validatePhoneNumber(row);
+		    String phoneNumber = validatePhoneNumber(row);
+		    if (phoneNumber == null)
+			continue;
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
                     String transactionPartyDetails = null;
@@ -231,12 +239,10 @@ public class MPesaXlsImporter extends StandardImport {
                     }
                     List<String> parameters = checkAndGetValues(transactionPartyDetails);
 
-                    String governmentId = parameters.get(0);
                     List<String> loanPrds = new LinkedList<String>();
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
-                    loanPrds.addAll(parameters.subList(1, parameters.size() - 1));
+                    loanPrds.addAll(parameters.subList(0, parameters.size() - 1));
 
-                    checkBlank(governmentId, "Government ID", row);
                     checkBlank(lastInTheOrderProdSName, "Savings product short name", row);
 
                     BigDecimal paidInAmount = BigDecimal.ZERO;
@@ -251,7 +257,7 @@ public class MPesaXlsImporter extends StandardImport {
                         BigDecimal loanAccountPaymentAmount = BigDecimal.ZERO;
                         BigDecimal loanAccountTotalDueAmount = BigDecimal.ZERO;
 
-                        final AccountReferenceDto loanAccountReference = getLoanAccount(governmentId, loanPrd);
+                        final AccountReferenceDto loanAccountReference = getLoanAccount(phoneNumber, loanPrd);
                         
                      // skip not found accounts as per specs P1 4.9 M-Pesa plugin
                         if(loanAccountReference == null){
@@ -290,10 +296,10 @@ public class MPesaXlsImporter extends StandardImport {
 
                     BigDecimal lastInOrderAmount;
                     AccountReferenceDto lastInOrderAcc;
-                    lastInOrderAcc = getSavingsAccount(governmentId, lastInTheOrderProdSName);
+                    lastInOrderAcc = getSavingsAccount(phoneNumber, lastInTheOrderProdSName);
                     
                     if(lastInOrderAcc == null) {
-                    	lastInOrderAcc = getLoanAccount(governmentId, lastInTheOrderProdSName);
+                    	lastInOrderAcc = getLoanAccount(phoneNumber, lastInTheOrderProdSName);
                     	if (lastInOrderAcc != null) {
                     		BigDecimal totalPaymentDueAmount = getTotalPaymentDueAmount(lastInOrderAcc);
                     		if(paidInAmount.compareTo(totalPaymentDueAmount) != 0) {
@@ -355,7 +361,7 @@ public class MPesaXlsImporter extends StandardImport {
         List<String> parameters = new LinkedList<String>();
         String[] result = transactionPartyDetails.split(" ");
         parameters.addAll(Arrays.asList(result));
-        if (result.length == 1) {
+        if (result.length <= 1) {
             List<String> importTransactionOrder = getImportTransactionOrder();
             if (importTransactionOrder == null || importTransactionOrder.isEmpty()) {
                 throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
@@ -471,24 +477,24 @@ public class MPesaXlsImporter extends StandardImport {
 
     }
 
-    protected AccountReferenceDto getSavingsAccount(final String governmentId, final String savingsProductShortName) throws Exception {
+    protected AccountReferenceDto getSavingsAccount(final String phoneNumber, final String savingsProductShortName) throws Exception {
         AccountReferenceDto account = null;
         try {
-            account = getAccountService().lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(governmentId, savingsProductShortName);
+            account = getAccountService().lookupSavingsAccountReferenceFromClientPhoneNumberAndSavingsProductShortName(phoneNumber, savingsProductShortName);
         } catch (Exception e) {
-            if (!e.getMessage().equals("savings not found for client government id " + governmentId + " and savings product short name " + savingsProductShortName)) {
+            if (!e.getMessage().equals("savings not found for client phone number " + phoneNumber + " and savings product short name " + savingsProductShortName)) {
                 throw e;
             }
         }
         return account;
     }
 
-    protected AccountReferenceDto getLoanAccount(final String governmentId, final String loanProductShortName) throws Exception {
+    protected AccountReferenceDto getLoanAccount(final String phoneNumber, final String loanProductShortName) throws Exception {
         AccountReferenceDto account = null;
         try {
-            account = getAccountService().lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(governmentId, loanProductShortName);
+            account = getAccountService().lookupLoanAccountReferenceFromClientPhoneNumberAndLoanProductShortName(phoneNumber, loanProductShortName);
         } catch (Exception e) {
-            if(!e.getMessage().equals("loan not found for client government id " + governmentId  + " and loan product short name " + loanProductShortName)) {
+            if(!e.getMessage().equals("loan not found for client phone number " + phoneNumber  + " and loan product short name " + loanProductShortName)) {
                 throw e;
             }
         }

@@ -170,6 +170,7 @@ public class MPesaXlsImporterTest {
         Assert.assertNull(ar);
     }
 
+	@Ignore
     @Test(expected=RuntimeException.class)
     public void getLoanAccountThrowsException() throws Exception {
         String govId = "12345";
@@ -191,6 +192,7 @@ public class MPesaXlsImporterTest {
         Assert.assertNull(ar);
     }
 
+	@Ignore
     @Test(expected=RuntimeException.class)
     public void getSavingsAccountThrowsException() throws Exception {
         String govId = "12345";
