@@ -64,7 +64,7 @@ import org.mifos.spi.ParseResultDto;
 public class MPesaXlsImporter extends StandardImport {
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
-    protected static final String PAYMENT_TYPE = "MPESA/ZAP";
+    protected static final String PAYMENT_TYPE = "MPESA";
     protected static final String EXPECTED_TRANSACTION_TYPE = "Pay Utility";
     protected static final int RECEIPT = 0;
     protected static final int TRANSACTION_DATE = 1;
