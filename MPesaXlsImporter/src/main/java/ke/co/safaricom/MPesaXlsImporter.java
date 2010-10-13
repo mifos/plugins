@@ -23,7 +23,6 @@ package ke.co.safaricom;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -31,11 +30,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.io.IOUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -43,7 +44,6 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
@@ -84,6 +84,13 @@ public class MPesaXlsImporter extends StandardImport {
     private static List<String> errorsList;
     private static List<String> importTransactionOrder;
     private static int successfullyParsedRows;
+
+    private Set<Integer> ignoredRowNums;
+	private Set<Integer> errorRowNums;
+
+	private BigDecimal totalAmountOfErrorRows;
+	private BigDecimal totalAmountOfImported;
+	
     @Override
     public String getDisplayName() {
         return "M-PESA Excel 97(-2007)";
@@ -133,44 +140,70 @@ public class MPesaXlsImporter extends StandardImport {
     			message);
     }
 
+    private void addError(Row row, String message) {
+	    errorsList.add(formatErrorMessage(row, message));
+		if (!errorRowNums.contains(row.getRowNum())) {
+			try {
+				BigDecimal paidIn = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
+				totalAmountOfErrorRows = totalAmountOfErrorRows.add(paidIn);
+			} catch (Exception e) {
+				// paid in couldn't be extracted, so skip this row
+			}
+		}
+		errorRowNums.add(row.getRowNum());
+    }
+
+	private void addIgnoredMessage(Row row, String message) {
+		errorsList.add(formatIgnoredErrorMessage(row, message));
+		ignoredRowNums.add(row.getRowNum());
+	}
+
     private ByteArrayInputStream copyInputIntoByteInput(InputStream input) throws IOException {
         return new ByteArrayInputStream(IOUtils.toByteArray(input));
     }
 
     private String getPhoneNumberCandidate(Row row) {
-	String cellContents = cellStringValue(row.getCell(OTHER_PARTY_INFO));
-	String[] splitted = cellContents.split(" ");
-	if (splitted == null || splitted.length == 0)
-	    return null;
-	return splitted[0];
-    }
+		String cellContents = cellStringValue(row.getCell(OTHER_PARTY_INFO));
+		String[] splitted = cellContents.split(" ");
+		if (splitted == null || splitted.length == 0) {
+			return null;
+		}
+		return splitted[0];
+	}
 
     /**
      * Returns validated phone number or null if there is no valid phone number in the row
      */
-    private String validatePhoneNumber(Row row) {
-	String phoneNumber = getPhoneNumberCandidate(row);
-	if (phoneNumber == null)
-	    return null;
-	List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
-	if (customers == null || customers.isEmpty()) {
-	    errorsList.add(formatErrorMessage(row,
-				String.format("Client with mobile number %s was not found", phoneNumber)));
-	    return null;
-	} else if (customers.size() >= 2) {
-	   errorsList.add(formatErrorMessage(row,
-				String.format("More than 1 client with mobile number %s was found", phoneNumber)));
-	   return null;
-	}
-	return phoneNumber;
+   private String validatePhoneNumber(Row row) {
+		String phoneNumber = getPhoneNumberCandidate(row);
+		if (phoneNumber == null) {
+			return null;
+		}
+		List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
+		if (customers == null || customers.isEmpty()) {
+			addError(row, String.format("Client with mobile number %s was not found", phoneNumber));
+			return null;
+		} else if (customers.size() >= 2) {
+			addError(row, String.format("More than 1 client with mobile number %s was found", phoneNumber));
+			return null;
+		}
+		return phoneNumber;
     }
+
+   private void initializeParser() {
+		cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
+		pmts = new ArrayList<AccountPaymentParametersDto>();
+		errorsList = new LinkedList<String>();
+		successfullyParsedRows = 0;
+		errorRowNums = new HashSet<Integer>();
+		ignoredRowNums = new HashSet<Integer>();
+		totalAmountOfErrorRows = BigDecimal.ZERO;
+		totalAmountOfImported = BigDecimal.ZERO;
+	}
 
     @Override
     public ParseResultDto parse(final InputStream input) {
-        cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
-        pmts = new ArrayList<AccountPaymentParametersDto>();
-        errorsList = new LinkedList<String>();
-        successfullyParsedRows = 0;
+		initializeParser();
 
         try {
             Iterator<Row> rowIterator = null;
@@ -216,13 +249,14 @@ public class MPesaXlsImporter extends StandardImport {
                     try {
                         transDate = getDate(row.getCell(TRANSACTION_DATE));
                     } catch (Exception e) {
-                        errorsList.add(formatErrorMessage(row, "Date does not begin with expected format (YYYY-MM-DD)"));
+                        addError(row, "Date does not begin with expected format (YYYY-MM-DD)");
                         continue;
                     }
 
-		    String phoneNumber = validatePhoneNumber(row);
-		    if (phoneNumber == null)
-			continue;
+					String phoneNumber = validatePhoneNumber(row);
+					if (phoneNumber == null) {
+						continue;
+					}
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
                     String transactionPartyDetails = null;
@@ -303,14 +337,14 @@ public class MPesaXlsImporter extends StandardImport {
                     	if (lastInOrderAcc != null) {
                     		BigDecimal totalPaymentDueAmount = getTotalPaymentDueAmount(lastInOrderAcc);
                     		if(paidInAmount.compareTo(totalPaymentDueAmount) != 0) {
-                    			errorsList.add("Last account is a laon account but the total payment amount is less than amount paid in. Input line number: "+ friendlyRowNum);
+                    			addError(row, "Last account is a laon account but the total payment amount is less than amount paid in");
                     			continue;  
                     		}
                     	}
                     }
                     
                     if(lastInOrderAcc == null) {
-                        errorsList.add(formatErrorMessage(row, "No account found"));
+                        addError(row, "No account found");
                         continue;
                     }
 
@@ -347,8 +381,27 @@ public class MPesaXlsImporter extends StandardImport {
             errorsList.add(e.getMessage() + ". Got error before reading rows");
 
         }
-        return new ParseResultDto(errorsList, pmts);
+        return parsingResult();
     }
+
+	private ParseResultDto parsingResult() {
+		ParseResultDto result = new ParseResultDto(errorsList, pmts);
+		result.setNumberOfErrorRows(errorRowNums.size());
+		result.setNumberOfIgnoredRows(ignoredRowNums.size());
+		result.setNumberOfReadRows(result.getNumberOfErrorRows() + result.getNumberOfIgnoredRows() +
+				successfullyParsedRows);
+		result.setTotalAmountOfTransactionsWithError(totalAmountOfErrorRows);
+		result.setTotalAmountOfTransactionsImported(sumAmountsOfPayments());
+		return result;
+	}
+
+	private BigDecimal sumAmountsOfPayments() {
+		BigDecimal result = BigDecimal.ZERO;
+		for (AccountPaymentParametersDto payment : pmts) {
+			result = result.add(payment.getPaymentAmount());
+		}
+		return result;
+	}
 
     /**
      * Get the parameter list from transaction party details field or ImportTransactionOrder property. This method is
@@ -396,40 +449,40 @@ public class MPesaXlsImporter extends StandardImport {
 
     private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) throws Exception {
     	if (row.getLastCellNum() < MAX_CELL_NUM) {
-            errorsList.add(formatErrorMessage(row, "Missing required data"));
+            addError(row, "Missing required data");
             return false;
         }
     	if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
-    		errorsList.add(formatIgnoredErrorMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed"));
+    		addIgnoredMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed");
     		return false;
     	}
 	if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(EXPECTED_TRANSACTION_TYPE)) {
-    		errorsList.add(formatIgnoredErrorMessage(row, "Transaction type " + row.getCell(TRANSACTION_TYPE) +
-			" instead of " + EXPECTED_TRANSACTION_TYPE));
+    		addIgnoredMessage(row, "Transaction type " + row.getCell(TRANSACTION_TYPE) +
+					" instead of " + EXPECTED_TRANSACTION_TYPE);
     		return false;
     	}
     	
         if (null == row.getCell(TRANSACTION_DATE)) {
-            errorsList.add(formatErrorMessage(row, "Date field is empty"));
+            addError(row, "Date field is empty");
             return false;
         }
         if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
-            errorsList.add(formatErrorMessage(row, "\"Transaction party details\" field is empty."));
+            addError(row, "\"Transaction party details\" field is empty.");
             return false;
         }
         if (null == row.getCell(PAID_IN)) {
-            errorsList.add(formatErrorMessage(row, "\"Paid in\" field is empty."));
+            addError(row, "\"Paid in\" field is empty.");
             return false;
         }
         if (row.getCell(STATUS) == null) {
-            errorsList.add(formatErrorMessage(row, "Status field is empty"));
+            addError(row, "Status field is empty");
             return false;
         }
         else {
             String receiptNumber = cellStringValue(row.getCell(RECEIPT));
 			if (receiptNumber != null && !receiptNumber.isEmpty()) {
             	if (getAccountService().receiptExists(receiptNumber)) {
-            		errorsList.add(formatErrorMessage(row, "Transactions with same Receipt ID have already been imported"));
+            		addError(row, "Transactions with same Receipt ID have already been imported");
             		return false;
             	}
             }
@@ -439,7 +492,7 @@ public class MPesaXlsImporter extends StandardImport {
 
     private void checkBlank(final String value, final String name, final Row row) {
         if (StringUtils.isBlank(value)) {
-            errorsList.add(formatErrorMessage(row, name + " could not be extracted"));
+            addError(row, name + " could not be extracted");
         }
     }
 
@@ -451,19 +504,19 @@ public class MPesaXlsImporter extends StandardImport {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
                 case INVALID_DATE:
-                    errorsList.add(formatErrorMessage(row, "Invalid transaction date"));
+                    addError(row, "Invalid transaction date");
                     break;
                 case UNSUPPORTED_PAYMENT_TYPE:
-                    errorsList.add(formatErrorMessage(row, "Unsupported payment type"));
+                    addError(row, "Unsupported payment type");
                     break;
                 case INVALID_PAYMENT_AMOUNT:
-                    errorsList.add(formatErrorMessage(row, "Invalid payment amount"));
+                    addError(row, "Invalid payment amount");
                     break;
                 case INVALID_LOAN_STATE:
-                    errorsList.add(formatErrorMessage(row, "Invalid account state"));
+                    addError(row, "Invalid account state");
                     break;
                 default:
-                    errorsList.add(formatErrorMessage(row, "Invalid payment (reason unknown)"));
+                    addError(row, "Invalid payment (reason unknown)");
                     break;
                 }
             }
