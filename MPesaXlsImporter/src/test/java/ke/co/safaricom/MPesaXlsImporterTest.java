@@ -151,6 +151,13 @@ public class MPesaXlsImporterTest {
         Assert.assertEquals("ALA", parameters.get(1));
         Assert.assertEquals("NLA", parameters.get(2));
         Assert.assertEquals("SA", parameters.get(3));
+
+		parameters = concreteImporter.checkAndGetValues("ALA");
+
+        Assert.assertEquals("ALA", parameters.get(0));
+        Assert.assertEquals("ALA", parameters.get(1));
+        Assert.assertEquals("NLA", parameters.get(2));
+        Assert.assertEquals("SA", parameters.get(3));
     }
 
     @Test(expected = MPesaXlsImporterException.class)
@@ -170,13 +177,12 @@ public class MPesaXlsImporterTest {
         Assert.assertNull(ar);
     }
 
-	@Ignore
     @Test(expected=RuntimeException.class)
     public void getLoanAccountThrowsException() throws Exception {
         String govId = "12345";
         String loanPrdShortName = "LP";
         reset(accountService);
-        when(accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(govId, loanPrdShortName))
+        when(accountService.lookupLoanAccountReferenceFromClientPhoneNumberAndLoanProductShortName(govId, loanPrdShortName))
         .thenThrow(new RuntimeException("Some message"));
         AccountReferenceDto ar = concreteImporter.getLoanAccount(govId, loanPrdShortName);
     }
@@ -192,13 +198,12 @@ public class MPesaXlsImporterTest {
         Assert.assertNull(ar);
     }
 
-	@Ignore
     @Test(expected=RuntimeException.class)
     public void getSavingsAccountThrowsException() throws Exception {
         String govId = "12345";
         String savingsPrdShortName = "LP";
         reset(accountService);
-        when(accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(govId, savingsPrdShortName))
+        when(accountService.lookupSavingsAccountReferenceFromClientPhoneNumberAndSavingsProductShortName(govId, savingsPrdShortName))
         .thenThrow(new RuntimeException("Some message"));
         AccountReferenceDto ar = concreteImporter.getSavingsAccount(govId, savingsPrdShortName);
     }
