@@ -157,12 +157,12 @@ public class MPesaXlsImporterTest {
         Assert.assertEquals("NLA", parameters.get(2));
         Assert.assertEquals("SA", parameters.get(3));
 
+		// must return unique params
 		parameters = concreteImporter.checkAndGetValues("ALA");
 
         Assert.assertEquals("ALA", parameters.get(0));
-        Assert.assertEquals("ALA", parameters.get(1));
-        Assert.assertEquals("NLA", parameters.get(2));
-        Assert.assertEquals("SA", parameters.get(3));
+        Assert.assertEquals("NLA", parameters.get(1));
+        Assert.assertEquals("SA", parameters.get(2));
     }
 
     @Test(expected = MPesaXlsImporterException.class)

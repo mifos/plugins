@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import org.apache.commons.io.IOUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -401,6 +403,16 @@ public class MPesaXlsImporter extends StandardImport {
 		return result;
 	}
 
+	private List<String> uniqueStrings(List<String> lst) {
+		List<String> ret = new ArrayList<String>();
+		for (String elem : lst) {
+			if (!ret.contains(elem)) {
+				ret.add(elem);
+			}
+		}
+		return ret;
+	}
+
     /**
      * Get the parameter list from transaction party details field or ImportTransactionOrder property. This method is
      * executed after validation of input.
@@ -421,7 +433,7 @@ public class MPesaXlsImporter extends StandardImport {
             }
             parameters.addAll(importTransactionOrder);
         }
-        return parameters;
+        return uniqueStrings(parameters);
     }
 
     private AccountPaymentParametersDto createPaymentParametersDto(final AccountReferenceDto accountReference,
