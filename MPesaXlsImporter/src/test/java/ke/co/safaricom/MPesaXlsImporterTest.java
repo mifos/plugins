@@ -30,6 +30,7 @@ import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -47,6 +48,7 @@ import org.junit.runner.RunWith;
 import org.mifos.accounts.api.AccountPaymentParametersDto;
 import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.AccountService;
+import org.mifos.accounts.api.CustomerDto;
 import org.mifos.accounts.api.CustomerSearchService;
 import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.accounts.api.PaymentTypeDto;
@@ -63,6 +65,8 @@ public class MPesaXlsImporterTest {
     @Mock
     AccountService accountService;
 	@Mock
+	CustomerSearchService searchService;
+	@Mock
 	CustomerSearchService customerSearchService;
     @Mock
     AccountReferenceDto account;
@@ -70,6 +74,8 @@ public class MPesaXlsImporterTest {
     UserReferenceDto userReferenceDto;
     @Mock
     PaymentTypeDto paymentTypeDto;
+
+	CustomerDto customerDTO = new CustomerDto(1, "John Foo Bar", (short)1, "");
 
     List<InvalidPaymentReason> noErrors = new ArrayList<InvalidPaymentReason>();
 
@@ -82,8 +88,9 @@ public class MPesaXlsImporterTest {
     @Before
     public void setUpBeforeMethod() throws Exception {
         when(accountService.validatePayment(any(AccountPaymentParametersDto.class))).thenReturn(noErrors);
-        when(accountService.lookupLoanAccountReferenceFromClientGovernmentIdAndLoanProductShortName(anyString(), anyString())).thenReturn(account);
-        when(accountService.lookupSavingsAccountReferenceFromClientGovernmentIdAndSavingsProductShortName(anyString(), anyString())).thenReturn(account);
+        when(accountService.lookupLoanAccountReferenceFromClientPhoneNumberAndLoanProductShortName(anyString(), matches("(ALA|NLA|SA)"))).thenReturn(account);
+        when(accountService.lookupSavingsAccountReferenceFromClientPhoneNumberAndSavingsProductShortName(anyString(), matches("(ALA|NLA|SA)"))).thenReturn(account);
+		when(customerSearchService.findCustomersWithGivenPhoneNumber(anyString())).thenReturn(Arrays.asList(customerDTO));
         List<String> importTransactionOrder = new ArrayList<String>();
         importTransactionOrder.add("ALA");
         importTransactionOrder.add("NLA");
@@ -124,8 +131,6 @@ public class MPesaXlsImporterTest {
         assertThat(concreteImporter.getDate(cellWithDate), is(expected));
     }
 
-	// TODO - fix tests for phone number checks
-	@Ignore
     @Test
     public void successfulImport() throws Exception {
         String testDataFilename = this.getClass().getResource("/example_import.xls").getFile();

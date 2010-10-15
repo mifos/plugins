@@ -89,7 +89,6 @@ public class MPesaXlsImporter extends StandardImport {
 	private Set<Integer> errorRowNums;
 
 	private BigDecimal totalAmountOfErrorRows;
-	private BigDecimal totalAmountOfImported;
 	
     @Override
     public String getDisplayName() {
@@ -198,7 +197,6 @@ public class MPesaXlsImporter extends StandardImport {
 		errorRowNums = new HashSet<Integer>();
 		ignoredRowNums = new HashSet<Integer>();
 		totalAmountOfErrorRows = BigDecimal.ZERO;
-		totalAmountOfImported = BigDecimal.ZERO;
 	}
 
     @Override
