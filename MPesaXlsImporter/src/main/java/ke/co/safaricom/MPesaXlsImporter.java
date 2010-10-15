@@ -457,8 +457,8 @@ public class MPesaXlsImporter extends StandardImport {
     		return false;
     	}
 	if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(EXPECTED_TRANSACTION_TYPE)) {
-    		addIgnoredMessage(row, "Transaction type " + row.getCell(TRANSACTION_TYPE) +
-					" instead of " + EXPECTED_TRANSACTION_TYPE);
+    		addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE) +
+					"\" instead of \"" + EXPECTED_TRANSACTION_TYPE + "\"");
     		return false;
     	}
     	
