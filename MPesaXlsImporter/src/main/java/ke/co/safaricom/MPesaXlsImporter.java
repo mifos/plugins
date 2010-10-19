@@ -403,14 +403,10 @@ public class MPesaXlsImporter extends StandardImport {
 		return result;
 	}
 
-	private List<String> uniqueStrings(List<String> lst) {
-		List<String> ret = new ArrayList<String>();
-		for (String elem : lst) {
-			if (!ret.contains(elem)) {
-				ret.add(elem);
-			}
-		}
-		return ret;
+	private boolean isProductNameCandidate(String rowContents) {
+		if (rowContents == null)
+			return false;
+		return rowContents.matches("[a-zA-Z]{2,4}[0-9]{0,1}");
 	}
 
     /**
@@ -423,8 +419,11 @@ public class MPesaXlsImporter extends StandardImport {
     protected List<String> checkAndGetValues(String transactionPartyDetails) {
         List<String> parameters = new LinkedList<String>();
         String[] result = transactionPartyDetails.split(" ");
-        parameters.addAll(Arrays.asList(result));
-        if (result.length <= 1) {
+		for (String word : result) {
+			if (isProductNameCandidate(word))
+				parameters.add(word);
+		}
+        if (parameters.isEmpty()) {
             List<String> importTransactionOrder = getImportTransactionOrder();
             if (importTransactionOrder == null || importTransactionOrder.isEmpty()) {
                 throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
@@ -433,7 +432,7 @@ public class MPesaXlsImporter extends StandardImport {
             }
             parameters.addAll(importTransactionOrder);
         }
-        return uniqueStrings(parameters);
+        return parameters;
     }
 
     private AccountPaymentParametersDto createPaymentParametersDto(final AccountReferenceDto accountReference,

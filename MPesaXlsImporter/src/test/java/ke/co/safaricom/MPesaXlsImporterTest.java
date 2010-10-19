@@ -145,24 +145,21 @@ public class MPesaXlsImporterTest {
     public void checkAndSetValuesSuccess() {
         List<String> parameters = concreteImporter.checkAndGetValues("GovID12 AL1 NL1 SA1");
 
-        Assert.assertEquals("GovID12", parameters.get(0));
-        Assert.assertEquals("AL1", parameters.get(1));
-        Assert.assertEquals("NL1", parameters.get(2));
-        Assert.assertEquals("SA1", parameters.get(3));
+        Assert.assertEquals("AL1", parameters.get(0));
+        Assert.assertEquals("NL1", parameters.get(1));
+        Assert.assertEquals("SA1", parameters.get(2));
 
         parameters = concreteImporter.checkAndGetValues("GovID12");
 
-        Assert.assertEquals("GovID12", parameters.get(0));
-        Assert.assertEquals("ALA", parameters.get(1));
-        Assert.assertEquals("NLA", parameters.get(2));
-        Assert.assertEquals("SA", parameters.get(3));
+        Assert.assertEquals("ALA", parameters.get(0));
+        Assert.assertEquals("NLA", parameters.get(1));
+        Assert.assertEquals("SA", parameters.get(2));
 
 		// must return unique params
 		parameters = concreteImporter.checkAndGetValues("ALA");
 
         Assert.assertEquals("ALA", parameters.get(0));
-        Assert.assertEquals("NLA", parameters.get(1));
-        Assert.assertEquals("SA", parameters.get(2));
+		Assert.assertEquals(1, parameters.size());
     }
 
     @Test(expected = MPesaXlsImporterException.class)
