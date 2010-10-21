@@ -177,7 +177,8 @@ public class MPesaXlsImporter extends StandardImport {
      */
    private String validatePhoneNumber(Row row) {
 		String phoneNumber = getPhoneNumberCandidate(row);
-		if (phoneNumber == null) {
+		if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+			addError(row, "Cannot read client's phone number");
 			return null;
 		}
 		List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
