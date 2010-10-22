@@ -61,7 +61,7 @@ public abstract class StandardImport extends TransactionImport {
         PaymentTypeDto p = null;
         List<PaymentTypeDto> supportedPaymentTypes = getAccountService().getLoanPaymentTypes();
         for (PaymentTypeDto t : supportedPaymentTypes) {
-            if (t.getName().contains(paymentTypeName)) {
+            if (t.getName().trim().equals(paymentTypeName)) {
                 p = t;
                 break;
             }
