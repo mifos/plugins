@@ -202,6 +202,19 @@ public class MPesaXlsImporter extends StandardImport {
 		totalAmountOfErrorRows = BigDecimal.ZERO;
 	}
 
+   protected boolean userDefinedProductValid(String userDefinedProduct, String phoneNumber) throws Exception {
+		BigDecimal userDefinedAmount;
+		AccountReferenceDto userDefinedAcc = getSavingsAccount(phoneNumber, userDefinedProduct);
+		if (userDefinedAcc != null)
+			return true;
+
+		userDefinedAcc = getLoanAccount(phoneNumber, userDefinedProduct);
+		if (userDefinedAcc != null)
+			return true;
+
+		return false;
+	}
+
     @Override
     public ParseResultDto parse(final InputStream input) {
 		initializeParser();
@@ -272,8 +285,16 @@ public class MPesaXlsImporter extends StandardImport {
                     } else if (row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_STRING) {
                     transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
                     }
-                    List<String> parameters = checkAndGetValues(transactionPartyDetails);
 
+					String userDefinedProduct = getUserDefinedProduct(transactionPartyDetails);
+					List<String> parameters;
+					if (userDefinedProduct != null && !userDefinedProduct.isEmpty() &&
+								userDefinedProductValid(userDefinedProduct, phoneNumber)) {
+						parameters = Arrays.asList(userDefinedProduct);
+					} else {
+						parameters = getConfiguredProducts();
+					}
+					
                     List<String> loanPrds = new LinkedList<String>();
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
                     loanPrds.addAll(parameters.subList(0, parameters.size() - 1));
@@ -435,6 +456,22 @@ public class MPesaXlsImporter extends StandardImport {
         }
         return parameters;
     }
+
+	protected String getUserDefinedProduct(String transactionPartyDetails) {
+		String[] words = transactionPartyDetails.split(" ");
+		if (words.length == 0)
+			return null;
+		return words[0];
+	}
+
+	protected List<String> getConfiguredProducts() {
+		List<String> products = getImportTransactionOrder();
+		if (products == null || products.isEmpty()) {
+			throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
+					+ IMPORT_TRANSACTION_ORDER + " property is not set");
+		}
+		return products;
+	}
 
     private AccountPaymentParametersDto createPaymentParametersDto(final AccountReferenceDto accountReference,
             final BigDecimal paymentAmount, final LocalDate paymentDate) {
