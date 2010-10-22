@@ -203,7 +203,6 @@ public class MPesaXlsImporter extends StandardImport {
 	}
 
    protected boolean userDefinedProductValid(String userDefinedProduct, String phoneNumber) throws Exception {
-		BigDecimal userDefinedAmount;
 		AccountReferenceDto userDefinedAcc = getSavingsAccount(phoneNumber, userDefinedProduct);
 		if (userDefinedAcc != null)
 			return true;
