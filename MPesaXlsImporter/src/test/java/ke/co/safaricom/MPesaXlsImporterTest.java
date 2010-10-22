@@ -142,37 +142,6 @@ public class MPesaXlsImporterTest {
     }
     
     @Test
-    public void checkAndSetValuesSuccess() {
-        List<String> parameters = concreteImporter.checkAndGetValues("GovID12 AL1 NL1 SA1");
-
-        Assert.assertEquals("AL1", parameters.get(0));
-        Assert.assertEquals("NL1", parameters.get(1));
-        Assert.assertEquals("SA1", parameters.get(2));
-
-        parameters = concreteImporter.checkAndGetValues("GovID12");
-
-        Assert.assertEquals("ALA", parameters.get(0));
-        Assert.assertEquals("NLA", parameters.get(1));
-        Assert.assertEquals("SA", parameters.get(2));
-
-		parameters = concreteImporter.checkAndGetValues("ALA");
-
-        Assert.assertEquals("ALA", parameters.get(0));
-		Assert.assertEquals(1, parameters.size());
-
-		parameters = concreteImporter.checkAndGetValues("AL3");
-
-        Assert.assertEquals("AL3", parameters.get(0));
-		Assert.assertEquals(1, parameters.size());
-    }
-
-    @Test(expected = MPesaXlsImporterException.class)
-    public void checkAndSetValuesFailure() {
-        concreteImporter.getImportTransactionOrder().clear();
-        concreteImporter.checkAndGetValues("GovtID1");
-    }
-    
-    @Test
     public void getLoanAccountReturnsNull() throws Exception {
         String govId = "12345";
         String loanPrdShortName = "LP";

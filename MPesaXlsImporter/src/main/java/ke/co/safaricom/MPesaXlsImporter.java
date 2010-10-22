@@ -430,32 +430,6 @@ public class MPesaXlsImporter extends StandardImport {
 		return rowContents.matches("[a-zA-Z]{2,4}[0-9]{0,1}");
 	}
 
-    /**
-     * Get the parameter list from transaction party details field or ImportTransactionOrder property. This method is
-     * executed after validation of input.
-     * 
-     * @param transactionPartyDetails
-     * @return list of parameters
-     */
-    protected List<String> checkAndGetValues(String transactionPartyDetails) {
-        List<String> parameters = new LinkedList<String>();
-        String[] result = transactionPartyDetails.split(" ");
-		for (String word : result) {
-			if (isProductNameCandidate(word))
-				parameters.add(word);
-		}
-        if (parameters.isEmpty()) {
-            List<String> importTransactionOrder = getImportTransactionOrder();
-            if (importTransactionOrder == null || importTransactionOrder.isEmpty()) {
-                throw new MPesaXlsImporterException("No Product name in \"Transaction Party Details\" field and "
-                        + IMPORT_TRANSACTION_ORDER + " property is not set");
-
-            }
-            parameters.addAll(importTransactionOrder);
-        }
-        return parameters;
-    }
-
 	protected String getUserDefinedProduct(String transactionPartyDetails) {
 		String[] words = transactionPartyDetails.split(" ");
 		if (words.length == 0)
