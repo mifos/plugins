@@ -37,8 +37,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import org.apache.commons.io.IOUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -392,7 +390,7 @@ public class MPesaXlsImporter extends StandardImport {
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
                 	e.printStackTrace();
-                    errorsList.add(formatErrorMessage(row, e.getMessage()));
+                    addError(row, e.getMessage());
                     continue;
                 }
             }
