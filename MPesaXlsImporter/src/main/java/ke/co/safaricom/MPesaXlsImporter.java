@@ -431,6 +431,8 @@ public class MPesaXlsImporter extends StandardImport {
 	}
 
 	protected String getUserDefinedProduct(String transactionPartyDetails) {
+		if (transactionPartyDetails == null || transactionPartyDetails.trim().isEmpty())
+			return null;
 		String[] words = transactionPartyDetails.split(" ");
 		if (words.length == 0)
 			return null;
