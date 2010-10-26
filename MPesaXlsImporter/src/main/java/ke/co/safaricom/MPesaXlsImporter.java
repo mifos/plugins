@@ -422,12 +422,6 @@ public class MPesaXlsImporter extends StandardImport {
 		return result;
 	}
 
-	private boolean isProductNameCandidate(String rowContents) {
-		if (rowContents == null)
-			return false;
-		return rowContents.matches("[a-zA-Z]{2,4}[0-9]{0,1}");
-	}
-
 	protected String getUserDefinedProduct(String transactionPartyDetails) {
 		if (transactionPartyDetails == null || transactionPartyDetails.trim().isEmpty())
 			return null;
@@ -472,6 +466,10 @@ public class MPesaXlsImporter extends StandardImport {
             addError(row, "Missing required data");
             return false;
         }
+		if (row.getCell(STATUS) == null || row.getCell(STATUS).getStringCellValue() == null) {
+			addError(row, "Missing required data");
+            return false;
+		}
     	if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
     		addIgnoredMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed");
     		return false;
