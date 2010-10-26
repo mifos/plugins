@@ -409,6 +409,9 @@ public class MPesaXlsImporter extends StandardImport {
 		result.setNumberOfIgnoredRows(ignoredRowNums.size());
 		result.setNumberOfReadRows(result.getNumberOfErrorRows() + result.getNumberOfIgnoredRows() +
 				successfullyParsedRows);
+		if (result.getNumberOfReadRows() == 0) {
+			errorsList.add("No rows found with import data");
+		}
 		result.setTotalAmountOfTransactionsWithError(totalAmountOfErrorRows);
 		result.setTotalAmountOfTransactionsImported(sumAmountsOfPayments());
 		return result;
