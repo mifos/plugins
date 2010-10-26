@@ -363,7 +363,7 @@ public class MPesaXlsImporter extends StandardImport {
                     }
                     
                     if(lastInOrderAcc == null) {
-                        addError(row, "No account found");
+                        addError(row, "No valid accounts found with this transaction");
                         continue;
                     }
 
