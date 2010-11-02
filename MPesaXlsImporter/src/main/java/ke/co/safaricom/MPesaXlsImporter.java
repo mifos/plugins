@@ -95,6 +95,19 @@ public class MPesaXlsImporter extends StandardImport {
         return "M-PESA Excel 97(-2007)";
     }
 
+	@Override
+	public String getPropertyNameForAdminDisplay() {
+		return "MPESA transaction order";
+	}
+
+	@Override
+	public String getPropertyValueForAdminDisplay() {
+		List<String> order = getImportTransactionOrder();
+		if (order == null || order.isEmpty())
+			return "NOT DEFINED";
+		return StringUtils.join(order, ", ");
+	}
+
     @SuppressWarnings("unchecked")
     protected List<String> getImportTransactionOrder() {
         if (importTransactionOrder == null) {
