@@ -355,8 +355,8 @@ public class MPesaXlsImporter extends StandardImport {
                     	lastInOrderAcc = getLoanAccount(phoneNumber, lastInTheOrderProdSName);
                     	if (lastInOrderAcc != null) {
                     		BigDecimal totalPaymentDueAmount = getTotalPaymentDueAmount(lastInOrderAcc);
-                    		if(paidInAmount.compareTo(totalPaymentDueAmount) != 0) {
-                    			addError(row, "Last account is a loan account but the total payment amount is not equal to amount paid in");
+                    		if(paidInAmount.compareTo(totalPaymentDueAmount) > 0) {
+                    			addError(row, "Last account is a loan account but the total payment amount is greater than amount paid in");
                     			continue;  
                     		}
                     	}
