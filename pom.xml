@@ -12,6 +12,7 @@
         <module>AudiBankXlsLoanPaymentImporter</module>
         <module>MPesaXlsImporter</module>
         <module>MPesaXlsLoanDisbursement</module>
+        <module>GroovyExample</module>
     </modules>
 
     <!-- Only mention our repository, following "open source" guidance at
