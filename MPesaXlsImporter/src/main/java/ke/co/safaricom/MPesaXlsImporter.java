@@ -203,6 +203,10 @@ public class MPesaXlsImporter extends StandardImport {
 		return phoneNumber;
     }
 
+   private CustomerDto customerWithPhoneNumber(String phoneNumber) {
+       return getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber).get(0);
+   }
+
    private void initializeParser() {
 		cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
 		pmts = new ArrayList<AccountPaymentParametersDto>();
@@ -352,7 +356,8 @@ public class MPesaXlsImporter extends StandardImport {
                             break;
                         }
                         loanPaymentList.add(new AccountPaymentParametersDto(getUserReferenceDto(),
-                                loanAccountReference, loanAccountPaymentAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt));
+                                loanAccountReference, loanAccountPaymentAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt,
+                                customerWithPhoneNumber(phoneNumber)));
 
                     }
 
@@ -390,7 +395,8 @@ public class MPesaXlsImporter extends StandardImport {
                     final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
                     final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
-                            getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt);
+                            getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt,
+                            customerWithPhoneNumber(phoneNumber));
 
                     if (!isPaymentValid(cumulativePaymentlastAcc, row)) {
                         continue;
