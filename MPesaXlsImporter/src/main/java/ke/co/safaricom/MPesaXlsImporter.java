@@ -450,7 +450,7 @@ public class MPesaXlsImporter extends StandardImport {
 	protected List<String> getConfiguredProducts() {
 		List<String> products = getImportTransactionOrder();
 		if (products == null || products.isEmpty()) {
-			throw new MPesaXlsImporterException("Account in \"Transaction Party Details\" field not found");
+			throw new MPesaXlsImporterException("No valid product name in \"Transaction Party Details\" field and ImportTransactionOrder property is not set");
 		}
 		return products;
 	}
