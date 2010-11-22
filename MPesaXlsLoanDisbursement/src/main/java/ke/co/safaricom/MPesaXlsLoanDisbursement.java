@@ -20,17 +20,6 @@
 
 package ke.co.safaricom;
 
-import java.io.InputStream;
-import java.math.BigDecimal;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -42,6 +31,17 @@ import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
 import org.mifos.accounts.api.PaymentTypeDto;
 import org.mifos.spi.ParseResultDto;
+
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
 
 public class MPesaXlsLoanDisbursement extends StandardImport {
     private static final String EXPECTED_STATUS = "Completed";
@@ -58,6 +58,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
     protected static final int OTHER_PARTY_INFO = 9;
     protected static final int TRANSACTION_PARTY_DETAILS = 10;
     protected static final int MAX_CELL_NUM = 11;
+    private final Locale locale = Locale.ENGLISH;
 
     @Override
     public String getDisplayName() {
@@ -66,7 +67,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
 
     @Override
     public void store(InputStream input) throws Exception {
-        getAccountService().disburseLoans(parse(input).getSuccessfullyParsedPayments());
+        getAccountService().disburseLoans(parse(input).getSuccessfullyParsedPayments(), locale);
     }
 
     @Override
@@ -242,7 +243,7 @@ public class MPesaXlsLoanDisbursement extends StandardImport {
     protected Date getDate(final Cell transDateCell) throws ParseException {
         Date date = null;
         if (transDateCell.getCellType() == Cell.CELL_TYPE_STRING) {
-            final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH);
+            final SimpleDateFormat dateAsText = new SimpleDateFormat(DATE_FORMAT, locale);
             dateAsText.setLenient(false);
             date = dateAsText.parse(transDateCell.getStringCellValue());
         } else if (transDateCell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
