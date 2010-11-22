@@ -229,6 +229,17 @@ public class MPesaXlsImporter extends StandardImport {
 		return false;
 	}
 
+   private boolean moreThanOneAccountMatchesProductCode(Row row, String phoneNumber, List<String> productNames) {
+       for (String productName : productNames) {
+           if (getAccountService().existsMoreThanOneLoanAccount(phoneNumber, productName) ||
+               getAccountService().existsMoreThanOneSavingsAccount(phoneNumber, productName)) {
+               addError(row, "More than one account matches product code " + productName);
+               return true;
+           }
+       }
+       return false;
+   }
+
     @Override
     public ParseResultDto parse(final InputStream input) {
 		initializeParser();
@@ -308,6 +319,10 @@ public class MPesaXlsImporter extends StandardImport {
 					} else {
 						parameters = getConfiguredProducts();
 					}
+
+                    if (moreThanOneAccountMatchesProductCode(row, phoneNumber, parameters)) {
+                        continue;
+                    }
 					
                     List<String> loanPrds = new LinkedList<String>();
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
