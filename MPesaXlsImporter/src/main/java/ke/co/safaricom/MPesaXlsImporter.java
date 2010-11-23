@@ -616,7 +616,7 @@ public class MPesaXlsImporter extends StandardImport {
                 break;
             }
             final Row row = rowIterator.next();
-            if (row.getCell(0).getStringCellValue().trim().equals("Transactions")) {
+            if (row.getCell(0) != null && row.getCell(0).getStringCellValue().trim().equals("Transactions")) {
                 skippingRowsBeforeTransactionData = false;
                 /* skip row with column descriptions */
                 rowIterator.next();
