@@ -96,6 +96,7 @@ public class MPesaXlsImporterTest {
         importTransactionOrder.add("NLA");
         importTransactionOrder.add("SA");
         when(accountService.getMifosConfiguration("ke.co.safaricom.MPesaXlsImporter.ImportTransactionOrder")).thenReturn(importTransactionOrder);
+        when(accountService.getMifosConfiguration("AccountingRules.DigitsAfterDecimal")).thenReturn("4");
         when(accountService.getTotalPaymentDueAmount(any(AccountReferenceDto.class))).thenReturn(BigDecimal.valueOf(1000.0));
         when(account.getAccountId()).thenReturn(fakeMifosAccountId);
         when(paymentTypeDto.getName()).thenReturn(MPesaXlsImporter.PAYMENT_TYPE);
