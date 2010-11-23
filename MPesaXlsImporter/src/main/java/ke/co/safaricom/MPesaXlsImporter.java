@@ -62,6 +62,7 @@ import org.mifos.spi.ParseResultDto;
  * 
  */
 public class MPesaXlsImporter extends StandardImport {
+    private static final String DIGITS_AFTER_DECIMAL = "AccountingRules.DigitsAfterDecimal";
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA";
@@ -240,6 +241,10 @@ public class MPesaXlsImporter extends StandardImport {
        return false;
    }
 
+   private int configuredDigitsAfterDecimal() {
+       return Integer.parseInt((String)getAccountService().getMifosConfiguration(DIGITS_AFTER_DECIMAL));
+   }
+
     @Override
     public ParseResultDto parse(final InputStream input) {
 		initializeParser();
@@ -334,6 +339,12 @@ public class MPesaXlsImporter extends StandardImport {
 
                     // FIXME: possible data loss converting double to BigDecimal?
                     paidInAmount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
+                    if (paidInAmount.scale() > configuredDigitsAfterDecimal()) {
+                        addError(row,
+                            String.format("Number of fraction digits in the \"Paid In\" column - %d - is greater than configured for the currency - %d",
+                            paidInAmount.scale(), configuredDigitsAfterDecimal()));
+                        continue;
+                    }
                     boolean cancelTransactionFlag = false;
 
                     List<AccountPaymentParametersDto> loanPaymentList = new ArrayList<AccountPaymentParametersDto>();
