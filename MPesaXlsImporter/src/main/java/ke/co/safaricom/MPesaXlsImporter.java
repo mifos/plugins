@@ -340,10 +340,20 @@ public class MPesaXlsImporter extends StandardImport {
                     // FIXME: possible data loss converting double to BigDecimal?
                     paidInAmount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
                     if (paidInAmount.scale() > configuredDigitsAfterDecimal()) {
-                        addError(row,
-                            String.format("Number of fraction digits in the \"Paid In\" column - %d - is greater than configured for the currency - %d",
-                            paidInAmount.scale(), configuredDigitsAfterDecimal()));
-                        continue;
+                        // when we create BigDecimal from double, then the scale is always greater than 0
+                        boolean nonZeroFractionalPart = false;
+                        try {
+                            paidInAmount.toBigIntegerExact();
+                        }
+                        catch (ArithmeticException e) {
+                            nonZeroFractionalPart = true;
+                        }
+                        if (paidInAmount.scale() > 1 || nonZeroFractionalPart) {
+                            addError(row,
+                                    String.format("Number of fraction digits in the \"Paid In\" column - %d - is greater than configured for the currency - %d",
+                                            paidInAmount.scale(), configuredDigitsAfterDecimal()));
+                            continue;
+                        }
                     }
                     boolean cancelTransactionFlag = false;
 
