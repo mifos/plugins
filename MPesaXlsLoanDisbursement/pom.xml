@@ -37,7 +37,7 @@
                         <phase>compile</phase>
                         <configuration>
                             <services>
-                                <param>org.mifos.spi.TransactionImport</param>
+                                <param>org.mifos.accounts.api.TransactionImport</param>
                             </services>
                         </configuration>
                     </execution>
@@ -70,16 +70,6 @@
             <groupId>org.mifos</groupId>
             <artifactId>plugins-common</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.mifos</groupId>
-            <artifactId>mifos-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mifos</groupId>
-            <artifactId>mifos-spi</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -122,6 +112,11 @@
                     <artifactId>log4j</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.mifos</groupId>
+            <artifactId>mifos-serviceInterfaces</artifactId>
+            <version>1.8-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

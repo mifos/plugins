@@ -24,10 +24,10 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import org.mifos.accounts.api.TransactionImport;
+import org.mifos.dto.domain.PaymentTypeDto;
+import org.mifos.dto.domain.AccountReferenceDto;
 
-import org.mifos.accounts.api.AccountReferenceDto;
-import org.mifos.accounts.api.PaymentTypeDto;
-import org.mifos.spi.TransactionImport;
 
 public abstract class StandardImport extends TransactionImport {
 

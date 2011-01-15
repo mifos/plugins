@@ -29,16 +29,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.mifos</groupId>
-            <artifactId>mifos-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mifos</groupId>
-            <artifactId>mifos-spi</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -47,6 +37,18 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mifos</groupId>
+            <artifactId>mifos-serviceInterfaces</artifactId>
+            <version>1.8-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.mifos</groupId>
+            <artifactId>mifos-appdomain</artifactId>
+            <version>1.8-SNAPSHOT</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
 </project>

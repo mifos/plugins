@@ -35,10 +35,10 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.joda.time.LocalDate;
-import org.mifos.accounts.api.AccountPaymentParametersDto;
-import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
-import org.mifos.spi.ParseResultDto;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
+import org.mifos.dto.domain.AccountReferenceDto;
+import org.mifos.dto.domain.ParseResultDto;
 
 public class AudiBankXlsImporter extends AudiBankImporter {
 

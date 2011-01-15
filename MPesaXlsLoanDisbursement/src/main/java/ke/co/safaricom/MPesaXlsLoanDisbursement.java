@@ -26,11 +26,6 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
-import org.mifos.accounts.api.AccountPaymentParametersDto;
-import org.mifos.accounts.api.AccountReferenceDto;
-import org.mifos.accounts.api.InvalidPaymentReason;
-import org.mifos.accounts.api.PaymentTypeDto;
-import org.mifos.spi.ParseResultDto;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -42,6 +37,11 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import org.mifos.accounts.api.InvalidPaymentReason;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
+import org.mifos.dto.domain.AccountReferenceDto;
+import org.mifos.dto.domain.ParseResultDto;
+import org.mifos.dto.domain.PaymentTypeDto;
 
 public class MPesaXlsLoanDisbursement extends StandardImport {
     private static final String EXPECTED_STATUS = "Completed";

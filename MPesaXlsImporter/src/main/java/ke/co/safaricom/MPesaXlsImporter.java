@@ -46,12 +46,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.joda.time.LocalDate;
 import org.mifos.StandardImport;
-import org.mifos.accounts.api.AccountPaymentParametersDto;
-import org.mifos.accounts.api.AccountReferenceDto;
-import org.mifos.accounts.api.CustomerDto;
 import org.mifos.accounts.api.InvalidPaymentReason;
-import org.mifos.accounts.api.PaymentTypeDto;
-import org.mifos.spi.ParseResultDto;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
+import org.mifos.dto.domain.AccountReferenceDto;
+import org.mifos.dto.domain.CustomerDto;
+import org.mifos.dto.domain.ParseResultDto;
+import org.mifos.dto.domain.PaymentTypeDto;
+
 
 /**
  * This class implements mpesa plugin which export transactions from an XLS sheet to Mifos database.

@@ -22,8 +22,6 @@ package ke.co.safaricom;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.io.FileInputStream;
@@ -35,26 +33,24 @@ import java.util.Date;
 import java.util.List;
 
 import junit.framework.Assert;
-import ke.co.safaricom.MPesaXlsImporter.MPesaXlsImporterException;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mifos.accounts.api.AccountPaymentParametersDto;
-import org.mifos.accounts.api.AccountReferenceDto;
 import org.mifos.accounts.api.AccountService;
-import org.mifos.accounts.api.CustomerDto;
 import org.mifos.accounts.api.CustomerSearchService;
 import org.mifos.accounts.api.InvalidPaymentReason;
-import org.mifos.accounts.api.PaymentTypeDto;
-import org.mifos.accounts.api.UserReferenceDto;
-import org.mifos.spi.ParseResultDto;
-import org.mifos.spi.TransactionImport;
+import org.mifos.accounts.api.TransactionImport;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
+import org.mifos.dto.domain.AccountReferenceDto;
+import org.mifos.dto.domain.CustomerDto;
+import org.mifos.dto.domain.ParseResultDto;
+import org.mifos.dto.domain.PaymentTypeDto;
+import org.mifos.dto.domain.UserReferenceDto;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
