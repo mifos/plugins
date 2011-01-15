@@ -26,12 +26,12 @@ import java.util.Arrays;
 
 import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
-
-import org.mifos.accounts.api.AccountPaymentParametersDto;
+import org.mifos.accounts.api.TransactionImport;
 import org.mifos.accounts.api.AccountService;
-import org.mifos.accounts.api.UserReferenceDto;
-import org.mifos.spi.TransactionImport;
-import org.mifos.spi.ParseResultDto;
+import org.mifos.dto.domain.ParseResultDto;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
+import org.mifos.dto.domain.UserReferenceDto;
+
 
 public class GroovyPluginRunner extends TransactionImport {
     @Override

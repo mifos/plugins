@@ -1,7 +1,7 @@
 import org.joda.time.LocalDate
-import org.mifos.accounts.api.AccountPaymentParametersDto
+import org.mifos.dto.domain.AccountPaymentParametersDto;
 import org.mifos.framework.util.UnicodeUtil
-import org.mifos.spi.ParseResultDto
+import org.mifos.dto.domain.ParseResultDto
 
 def paymentType = null
 parent.accountService.loanPaymentTypes.each { ptype ->
