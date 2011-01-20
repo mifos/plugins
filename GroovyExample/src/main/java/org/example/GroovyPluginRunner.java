@@ -34,6 +34,9 @@ import org.mifos.dto.domain.UserReferenceDto;
 
 
 public class GroovyPluginRunner extends TransactionImport {
+    public static final String mifosGroovyPluginDir = System.getProperty("user.home") + "/.mifos/groovy";
+    public static final String examplePlugin = "examplePlugin.groovy";
+
     @Override
     public String getDisplayName() {
         return "Example Groovy Mifos Plugin";
@@ -41,14 +44,13 @@ public class GroovyPluginRunner extends TransactionImport {
 
     @Override
     public ParseResultDto parse(final InputStream input) {
-        String mifosGroovyPluginDir = System.getProperty("user.home") + "/.mifos/groovy";
         String[] roots = new String[] { mifosGroovyPluginDir };
         Binding binding = new Binding();
         try {
             GroovyScriptEngine gse = new GroovyScriptEngine(roots);
             binding.setVariable("rawInput", input);
             binding.setVariable("parent", this);
-            gse.run("examplePlugin.groovy", binding);
+            gse.run(examplePlugin, binding);
         } catch (Exception e) {
             e.printStackTrace(System.err);
             return new ParseResultDto(Arrays.asList(new String[] { "error running Groovy: " + e.getMessage() }),

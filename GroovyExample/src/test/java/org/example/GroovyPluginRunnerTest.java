@@ -26,7 +26,11 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +53,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GroovyPluginRunnerTest {
+    private static final String mifosGroovyPluginDir = System.getProperty("user.home") + "/.mifos/groovy";
     TransactionImport transactionImport;
     GroovyPluginRunner concreteImporter;
     @Mock
@@ -70,6 +75,7 @@ public class GroovyPluginRunnerTest {
      */
     @Before
     public void setUpBeforeMethod() throws Exception {
+        setUpExampleGroovyScript();
         concreteImporter = new GroovyPluginRunner();
         transactionImport = concreteImporter;
         transactionImport.setAccountService(accountService);
@@ -84,6 +90,24 @@ public class GroovyPluginRunnerTest {
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
     }
 
+    private void setUpExampleGroovyScript() throws Exception {
+        if (!new File(GroovyPluginRunner.mifosGroovyPluginDir).exists()) {
+            assert new File(GroovyPluginRunner.mifosGroovyPluginDir).mkdirs();
+        }
+
+        File src = new File("groovy/examplePlugin.groovy");
+        File dest = new File(GroovyPluginRunner.mifosGroovyPluginDir + "/" + GroovyPluginRunner.examplePlugin);
+        InputStream in = new FileInputStream(src);
+        OutputStream out = new FileOutputStream(dest);
+        byte[] buf = new byte[1024];
+        int len;
+        while ((len = in.read(buf)) > 0){
+          out.write(buf, 0, len);
+        }
+        in.close();
+        out.close();
+    }
+
     /**
      * Would rather use {@link AfterClass}, but this causes Mockito to throw an exception insisting that
      * "MockitoRunner can only be used with Junit 4.4 or higher."
@@ -96,11 +120,9 @@ public class GroovyPluginRunnerTest {
 
     @Test
     public void successfulImport() throws Exception {
-        /* TODO - this groovy plugin is broken (examplePlugin.groovy in .mifos/ is required for this plugin to work)
         String testDataFilename = this.getClass().getResource("/test.csv").getFile();
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(0));
         assertThat(result.getSuccessfullyParsedPayments().toString(), result.getSuccessfullyParsedPayments().size(), is(2));
-        */
     }
 }
