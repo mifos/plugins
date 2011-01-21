@@ -99,6 +99,7 @@ public class MPesaXlsImporterTest {
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
         paymentTypeList.add(paymentTypeDto);
         when(accountService.getLoanPaymentTypes()).thenReturn(paymentTypeList);
+        when(accountService.getLoanDisbursementTypes()).thenReturn(paymentTypeList);
         concreteImporter = new MPesaXlsImporter();
         transactionImport = concreteImporter;
         transactionImport.setAccountService(accountService);

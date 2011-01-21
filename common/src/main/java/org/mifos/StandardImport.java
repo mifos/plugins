@@ -22,9 +22,12 @@ package org.mifos;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.mifos.accounts.api.TransactionImport;
+import org.mifos.dto.domain.AccountPaymentParametersDto;
 import org.mifos.dto.domain.PaymentTypeDto;
 import org.mifos.dto.domain.AccountReferenceDto;
 
@@ -83,7 +86,22 @@ public abstract class StandardImport extends TransactionImport {
 
     @Override
     public void store(InputStream input) throws Exception {
-        getAccountService().makePayments(parse(input).getSuccessfullyParsedPayments());
+        List<AccountPaymentParametersDto> payments = new ArrayList<AccountPaymentParametersDto>();
+        List<AccountPaymentParametersDto> disbursals = new ArrayList<AccountPaymentParametersDto>();
+        List<AccountPaymentParametersDto> parsedPayments = parse(input).getSuccessfullyParsedPayments();
+        for (AccountPaymentParametersDto payment : parsedPayments) {
+            if (payment.getTransactionType().equals(AccountPaymentParametersDto.TransactionType.LOAN_DISBURSAL)) {
+                disbursals.add(payment);
+            } else {
+                payments.add(payment);
+            }
+        }
+        if (!payments.isEmpty()) {
+            getAccountService().makePayments(payments);
+        }
+        if (!disbursals.isEmpty()) {
+            getAccountService().disburseLoans(disbursals, Locale.ENGLISH);
+        }
     }
 
     @Override

@@ -67,7 +67,9 @@ public class MPesaXlsImporter extends StandardImport {
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA";
-    protected static final String EXPECTED_TRANSACTION_TYPE = "Pay Utility";
+    protected static final String PAYMENT_TRANSACTION_TYPE = "Pay Utility";
+    protected static final String DISBURSAL_TRANSACTION_TYPE = "Business Payment to Customer";
+    protected static final String DISBURSAL_DETAILS_PREFIX = "Payment to";
     protected static final int RECEIPT = 0;
     protected static final int TRANSACTION_DATE = 1;
     protected static final int DETAILS = 2;
@@ -91,6 +93,8 @@ public class MPesaXlsImporter extends StandardImport {
 	private Set<Integer> errorRowNums;
 
 	private BigDecimal totalAmountOfErrorRows;
+
+    private PaymentTypeDto paymentTypeForLoanDisbursals;
 	
     @Override
     public String getDisplayName() {
@@ -158,8 +162,13 @@ public class MPesaXlsImporter extends StandardImport {
 	    errorsList.add(formatErrorMessage(row, message));
 		if (!errorRowNums.contains(row.getRowNum())) {
 			try {
-				BigDecimal paidIn = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
-				totalAmountOfErrorRows = totalAmountOfErrorRows.add(paidIn);
+                            BigDecimal amount = null;
+                            if (isLoanDisbursement(row)) {
+                                amount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
+                            } else {
+                                amount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
+                            }
+                            totalAmountOfErrorRows = totalAmountOfErrorRows.add(amount);
 			} catch (Exception e) {
 				// paid in couldn't be extracted, so skip this row
 			}
@@ -246,6 +255,67 @@ public class MPesaXlsImporter extends StandardImport {
        return Integer.parseInt((String)getAccountService().getMifosConfiguration(DIGITS_AFTER_DECIMAL));
    }
 
+   private boolean isLoanDisbursement(Row row) {
+       return DISBURSAL_TRANSACTION_TYPE.equals(cellStringValue(row.getCell(TRANSACTION_TYPE))) &&
+               cellStringValue(row.getCell(DETAILS)) != null &&
+               cellStringValue(row.getCell(DETAILS)).startsWith(DISBURSAL_DETAILS_PREFIX);
+   }
+
+   public AccountPaymentParametersDto parseLoanDisbursement(Row row, String receipt, LocalDate paymentDate, String phoneNumber) throws Exception {
+       final BigDecimal withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
+       final String accountId = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
+       final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
+       if (accounts.size() > 1) {
+           addError(row, String.format("More than 1 loan found for client with mobile number %s and loan amount %s",
+                   phoneNumber, withdrawnAmount.toString()));
+           return null;
+       }
+       if (accounts.isEmpty()) {
+           addError(row, String.format("No approved loans found for client with mobile number %s and loan amount %s",
+                   phoneNumber, withdrawnAmount.toString()));
+           return null;
+       }
+       final AccountPaymentParametersDto loanAccDisbursementPayment = new AccountPaymentParametersDto(
+                            getUserReferenceDto(), accounts.get(0), withdrawnAmount, paymentDate, paymentTypeForLoanDisbursals, "");
+       loanAccDisbursementPayment.setTransactionType(AccountPaymentParametersDto.TransactionType.LOAN_DISBURSAL);
+       if (isLoanDisbursalValid(row, loanAccDisbursementPayment)) {
+           return loanAccDisbursementPayment;
+       }
+       return null;
+   }
+
+   public boolean isLoanDisbursalValid(Row row, AccountPaymentParametersDto cumulativePayment) throws Exception {
+       final List<InvalidPaymentReason> errors = getAccountService().validateLoanDisbursement(cumulativePayment);
+
+        if (!errors.isEmpty()) {
+            for (InvalidPaymentReason error : errors) {
+                switch (error) {
+                case INVALID_DATE:
+                    addError(row, "Invalid transaction date");
+                    break;
+                case UNSUPPORTED_PAYMENT_TYPE:
+                    addError(row, "Unsupported payment type");
+                    break;
+                case INVALID_PAYMENT_AMOUNT:
+                    addError(row, "Invalid payment amount");
+                    break;
+                case INVALID_LOAN_DISBURSAL_AMOUNT:
+                    addError(row, "The 'Withdrawn' amount must match the full loan amount");
+                    break;
+                case INVALID_LOAN_STATE:
+                    addError(row, "Invalid Loan state");
+                    break;
+                default:
+                    addError(row, "Invalid data");
+                    break;
+                }
+            }
+            return false;
+        }
+        return true;
+   }
+
+
     @Override
     public ParseResultDto parse(final InputStream input) {
 		initializeParser();
@@ -262,6 +332,7 @@ public class MPesaXlsImporter extends StandardImport {
                 try {
                     rowIterator = new XSSFWorkbook(copiedInput).getSheetAt(0).iterator();
                 } catch (Exception e2) {
+                    e2.printStackTrace();
                     throw new MPesaXlsImporterException("Unknown file format. Supported file formats are: XLS (from Excel 2003 or older), XLSX");
                 }
             }
@@ -304,6 +375,18 @@ public class MPesaXlsImporter extends StandardImport {
 					}
 
                     final LocalDate paymentDate = LocalDate.fromDateFields(transDate);
+
+                    // For default we import laon/savings payments, loan disbursements are handled in a different method
+                    if (isLoanDisbursement(row)) {
+                        AccountPaymentParametersDto result = parseLoanDisbursement(row, receipt, paymentDate, phoneNumber);
+                        if (result != null) {
+                            successfullyParsedRows+=1;
+                            pmts.add(result);
+                        }
+                        continue;
+                    }
+
+
                     String transactionPartyDetails = null;
                     
                     if(row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_NUMERIC) {
@@ -517,6 +600,12 @@ public class MPesaXlsImporter extends StandardImport {
                     + " this payment type?");
         }
         setPaymentTypeDto(paymentType);
+
+        paymentTypeForLoanDisbursals = findDisbursementType(PAYMENT_TYPE);
+        if (paymentTypeForLoanDisbursals == null) {
+            throw new MPesaXlsImporterException("Disbursement type " + PAYMENT_TYPE
+                    + " not found. Have you configured" + " this disbursement type?");
+        }
     }
 
     private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) throws Exception {
@@ -532,9 +621,9 @@ public class MPesaXlsImporter extends StandardImport {
     		addIgnoredMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed");
     		return false;
     	}
-	if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(EXPECTED_TRANSACTION_TYPE)) {
+	if (!isLoanDisbursement(row) && !row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
     		addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE) +
-					"\" instead of \"" + EXPECTED_TRANSACTION_TYPE + "\"");
+					"\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
     		return false;
     	}
     	
@@ -542,7 +631,7 @@ public class MPesaXlsImporter extends StandardImport {
             addError(row, "Date field is empty");
             return false;
         }
-        if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
+        if (!isLoanDisbursement(row) && null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
             addError(row, "\"Transaction party details\" field is empty.");
             return false;
         }
