@@ -1,3 +1,5 @@
 Plugins that can be used in Mifos.
 
-See http://www.mifos.org/developers/wiki/PluginManagement
+See http://mifosforge.jira.com/wiki/display/MIFOS/Plugin+Management
+
+NOTE: Cannot be built with Maven 3! See http://mifosforge.jira.com/browse/MIFOS-4520
