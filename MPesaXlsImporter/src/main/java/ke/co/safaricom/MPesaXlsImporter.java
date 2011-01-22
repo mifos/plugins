@@ -95,6 +95,7 @@ public class MPesaXlsImporter extends StandardImport {
 	private BigDecimal totalAmountOfErrorRows;
 
     private PaymentTypeDto paymentTypeForLoanDisbursals;
+
 	
     @Override
     public String getDisplayName() {
@@ -164,7 +165,7 @@ public class MPesaXlsImporter extends StandardImport {
 			try {
                             BigDecimal amount = null;
                             if (isLoanDisbursement(row)) {
-                                amount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
+                                amount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).abs();
                             } else {
                                 amount = BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue());
                             }
@@ -219,6 +220,7 @@ public class MPesaXlsImporter extends StandardImport {
    }
 
    private void initializeParser() {
+
 		cumulativeAmountByAccount = new HashMap<AccountReferenceDto, BigDecimal>();
 		pmts = new ArrayList<AccountPaymentParametersDto>();
 		errorsList = new LinkedList<String>();
@@ -262,7 +264,7 @@ public class MPesaXlsImporter extends StandardImport {
    }
 
    public AccountPaymentParametersDto parseLoanDisbursement(Row row, String receipt, LocalDate paymentDate, String phoneNumber) throws Exception {
-       final BigDecimal withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue());
+       final BigDecimal withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).abs();
        final String accountId = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
        final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
        if (accounts.size() > 1) {
@@ -552,10 +554,22 @@ public class MPesaXlsImporter extends StandardImport {
 			errorsList.add("No rows found with import data");
 		}
 		result.setTotalAmountOfTransactionsWithError(totalAmountOfErrorRows);
+                result.setTotalAmountOfDisbursementsImported(sumAmountsOfDisbursements());
 		result.setTotalAmountOfTransactionsImported(sumAmountsOfPayments());
 		return result;
 	}
 
+        private BigDecimal sumAmountsOfDisbursements()
+        {
+            BigDecimal result = BigDecimal.ZERO;
+
+            for(AccountPaymentParametersDto payment : pmts) {
+                if(payment.getTransactionType().equals(AccountPaymentParametersDto.TransactionType.LOAN_DISBURSAL))
+                    result = result.add(payment.getPaymentAmount());
+            }
+
+            return result;
+        }
 	private BigDecimal sumAmountsOfPayments() {
 		BigDecimal result = BigDecimal.ZERO;
 		for (AccountPaymentParametersDto payment : pmts) {
