@@ -1,19 +1,19 @@
 /*
  * Copyright (c) 2005-2010 Grameen Foundation USA
  * All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * permissions and limitations under the License.
- * 
+ *
  * See also http://www.apache.org/licenses/LICENSE-2.0.html for an
  * explanation of the license and how it is applied.
  */
@@ -58,13 +58,14 @@ import org.mifos.dto.domain.PaymentTypeDto;
  * This class implements mpesa plugin which export transactions from an XLS sheet to Mifos database.
  * It uses the standard mifos API/SPI. <br>
  * <a href='http://www.mifos.org/developers/wiki/PluginManagement'>http://www.mifos.org/developers/wiki/PluginManagement</a>
- * 
- * 
- * 
+ *
+ *
+ *
  */
 public class MPesaXlsImporter extends StandardImport {
     private static final String DIGITS_AFTER_DECIMAL = "AccountingRules.DigitsAfterDecimal";
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
+    private static final String MAX_MPESA_DISBURSLA_LIMIT = "MPESA.DisbursalMax";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA";
     protected static final String PAYMENT_TRANSACTION_TYPE = "Pay Utility";
@@ -87,6 +88,7 @@ public class MPesaXlsImporter extends StandardImport {
     private static List<AccountPaymentParametersDto> pmts;
     private static List<String> errorsList;
     private static List<String> importTransactionOrder;
+    private static Double maxMPESADisbursalLimit;
     private static int successfullyParsedRows;
 
     private Set<Integer> ignoredRowNums;
@@ -96,24 +98,31 @@ public class MPesaXlsImporter extends StandardImport {
 
     private PaymentTypeDto paymentTypeForLoanDisbursals;
 
-	
+
     @Override
     public String getDisplayName() {
         return "M-PESA Excel 97(-2007)";
     }
 
-	@Override
-	public String getPropertyNameForAdminDisplay() {
-		return "MPESA transaction order";
-	}
+    @Override
+    public Map<String, String> getPropertiesForAdminDisplay() {
+        Map<String, String> properties = new HashMap<String, String>();
+        List<String> order = getImportTransactionOrder();
 
-	@Override
-	public String getPropertyValueForAdminDisplay() {
-		List<String> order = getImportTransactionOrder();
-		if (order == null || order.isEmpty())
-			return "NOT DEFINED";
-		return StringUtils.join(order, ", ");
-	}
+        if (order == null || order.isEmpty())
+            properties.put("MPESA transaction order", "NOT DEFINED");
+        else
+            properties.put("MPESA transaction order", StringUtils.join(order, ", "));
+
+        Double limit = getMaxMPESADisbursalLimit();
+
+        if(limit == null)
+            properties.put("Max MPESA Disbursal Limit", "NOT DEFINED");
+        else
+            properties.put("Max MPESA Disbursal Limit", String.valueOf(limit));
+
+        return properties;
+    }
 
     @SuppressWarnings("unchecked")
     protected List<String> getImportTransactionOrder() {
@@ -128,7 +137,15 @@ public class MPesaXlsImporter extends StandardImport {
         }
         return importTransactionOrder;
     }
-    
+
+    @SuppressWarnings("unchecked")
+    protected Double getMaxMPESADisbursalLimit() {
+        if (maxMPESADisbursalLimit == null) {
+            maxMPESADisbursalLimit = Double.valueOf(getAccountService().getMifosConfiguration(MAX_MPESA_DISBURSLA_LIMIT).toString());
+        }
+        return maxMPESADisbursalLimit;
+    }
+
     private String cellStringValue(Cell cell) {
     	if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
     		return Double.toString(cell.getNumericCellValue());
@@ -136,7 +153,7 @@ public class MPesaXlsImporter extends StandardImport {
     		return cell.getStringCellValue();
     	}
     }
-    
+
     private String formatErrorMessage(Row row, String message) {
     	if (row == null) {
     		return String.format("Error - %s", message);
@@ -151,7 +168,7 @@ public class MPesaXlsImporter extends StandardImport {
     			cellStringValue(row.getCell(RECEIPT)),
     			message);
     }
-    
+
     private String formatIgnoredErrorMessage(Row row, String message) {
     	return String.format("Row <%d> ignored - %s - %s",
     			row.getRowNum() + 1,
@@ -360,7 +377,7 @@ public class MPesaXlsImporter extends StandardImport {
                     if (!isRowValid(row, friendlyRowNum, errorsList)) {
                         continue;
                     }
-                    
+
                     String receipt = cellStringValue(row.getCell(RECEIPT));
 
                     Date transDate;
@@ -390,7 +407,7 @@ public class MPesaXlsImporter extends StandardImport {
 
 
                     String transactionPartyDetails = null;
-                    
+
                     if(row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_NUMERIC) {
                         transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getNumericCellValue() +"";
                         if(transactionPartyDetails.endsWith(".0")){
@@ -414,7 +431,7 @@ public class MPesaXlsImporter extends StandardImport {
                     if (moreThanOneAccountMatchesProductCode(row, phoneNumber, parameters)) {
                         continue;
                     }
-					
+
                     List<String> loanPrds = new LinkedList<String>();
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
                     loanPrds.addAll(parameters.subList(0, parameters.size() - 1));
@@ -450,12 +467,12 @@ public class MPesaXlsImporter extends StandardImport {
                         BigDecimal loanAccountTotalDueAmount = BigDecimal.ZERO;
 
                         final AccountReferenceDto loanAccountReference = getLoanAccount(phoneNumber, loanPrd);
-                        
+
                      // skip not found accounts as per specs P1 4.9 M-Pesa plugin
                         if(loanAccountReference == null){
                             continue;
                         }
-                        
+
                         loanAccountTotalDueAmount = getTotalPaymentDueAmount(loanAccountReference);
 
                         if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -490,18 +507,18 @@ public class MPesaXlsImporter extends StandardImport {
                     BigDecimal lastInOrderAmount;
                     AccountReferenceDto lastInOrderAcc;
                     lastInOrderAcc = getSavingsAccount(phoneNumber, lastInTheOrderProdSName);
-                    
+
                     if(lastInOrderAcc == null) {
                     	lastInOrderAcc = getLoanAccount(phoneNumber, lastInTheOrderProdSName);
                     	if (lastInOrderAcc != null) {
                     		BigDecimal totalPaymentDueAmount = getTotalPaymentDueAmount(lastInOrderAcc);
                     		if(paidInAmount.compareTo(totalPaymentDueAmount) > 0) {
                     			addError(row, "Last account is a loan account but the total paid in amount is greater than the total due amount");
-                    			continue;  
+                    			continue;
                     		}
                     	}
                     }
-                    
+
                     if(lastInOrderAcc == null) {
                         addError(row, "No valid accounts found with this transaction");
                         continue;
@@ -513,7 +530,7 @@ public class MPesaXlsImporter extends StandardImport {
                     } else {
                         lastInOrderAmount = BigDecimal.ZERO;
                     }
-                    
+
                     final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
                     final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
@@ -640,7 +657,7 @@ public class MPesaXlsImporter extends StandardImport {
 					"\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
     		return false;
     	}
-    	
+
         if (null == row.getCell(TRANSACTION_DATE)) {
             addError(row, "Date field is empty");
             return false;
@@ -766,7 +783,7 @@ public class MPesaXlsImporter extends StandardImport {
     /**
      * M-PESA imports have multiple transactions per row. Two loan accounts and
      * one savings account, I think.
-     * 
+     *
      * See <a href="http://mifosforge.jira.com/browse/MIFOS-2909">MIFOS-2909</a>.
      */
     @Override
