@@ -644,6 +644,10 @@ public class MPesaXlsImporter extends StandardImport {
             addError(row, "Missing required data");
             return false;
         }
+        if(row.getCell(RECEIPT) == null || row.getCell(RECEIPT).getStringCellValue() == null){
+            addError(row, "Missing required data");
+            return false;
+        }
 		if (row.getCell(STATUS) == null || row.getCell(STATUS).getStringCellValue() == null) {
 			addError(row, "Missing required data");
             return false;
@@ -652,7 +656,11 @@ public class MPesaXlsImporter extends StandardImport {
     		addIgnoredMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed");
     		return false;
     	}
-	if (!isLoanDisbursement(row) && !row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
+        if(row.getCell(TRANSACTION_TYPE) == null || row.getCell(TRANSACTION_TYPE).getStringCellValue() == null){
+            addError(row, "Missing required data");
+            return false;
+        }
+        if (!isLoanDisbursement(row) && !row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
     		addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE) +
 					"\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
     		return false;
