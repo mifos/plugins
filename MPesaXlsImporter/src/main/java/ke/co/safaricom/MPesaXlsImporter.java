@@ -292,7 +292,26 @@ public class MPesaXlsImporter extends StandardImport {
     public AccountPaymentParametersDto parseLoanDisbursement(Row row, String receipt, LocalDate paymentDate, String phoneNumber) throws Exception {
         final BigDecimal withdrawnAmount = BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).abs();
         final String accountId = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
+
+         if (withdrawnAmount.scale() > configuredDigitsAfterDecimal()) {
+            // when we create BigDecimal from double, then the scale is always greater than 0
+            boolean nonZeroFractionalPart = false;
+            try {
+                withdrawnAmount.toBigIntegerExact();
+            } catch (ArithmeticException e) {
+                nonZeroFractionalPart = true;
+            }
+            if (withdrawnAmount.scale() > 1 || nonZeroFractionalPart) {
+                addError(row, String.format("Number of fraction digits in the "
+                        + "\"Withdrawn\" column - %d - is greater than configured"
+                        + " for the currency - %d", withdrawnAmount.scale(),
+                        configuredDigitsAfterDecimal()));
+                return null;
+            }
+        }
+
         final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
+
         if (accounts.size() > 1) {
             addError(row, String.format("More than 1 loan found for client with mobile number %s and loan amount %s",
                     phoneNumber, withdrawnAmount.toString()));
