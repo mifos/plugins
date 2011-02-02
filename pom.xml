@@ -38,13 +38,13 @@
             <dependency>
                 <groupId>org.mifos</groupId>
                 <artifactId>mifos-appdomain</artifactId>
-                <version>1.8-SNAPSHOT</version>
+                <version>1.9-SNAPSHOT</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.mifos</groupId>
                 <artifactId>mifos-serviceInterfaces</artifactId>
-                <version>1.8-SNAPSHOT</version>
+                <version>1.9-SNAPSHOT</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

@@ -3,7 +3,7 @@
     <groupId>ke.co.safaricom</groupId>
     <artifactId>mpesa-xls-importer</artifactId>
     <name>M-PESA Import Plugin (XLS)</name>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
 
     <parent>
         <groupId>org.mifos</groupId>
