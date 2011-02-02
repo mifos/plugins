@@ -83,6 +83,7 @@ public class MPesaXlsImporter extends StandardImport {
     protected static final int TRANSACTION_PARTY_DETAILS = 10;
     protected static final int MAX_CELL_NUM = 11;
     private static Map<AccountReferenceDto, BigDecimal> cumulativeAmountByAccount;
+    private static Map<String, BigDecimal> disbursals;
     private static List<AccountPaymentParametersDto> pmts;
     private static List<String> errorsList;
     private static List<String> importTransactionOrder;
@@ -241,6 +242,7 @@ public class MPesaXlsImporter extends StandardImport {
         ignoredRowNums = new HashSet<Integer>();
         totalAmountOfErrorRows = BigDecimal.ZERO;
         ReceiptIDList = new LinkedList<String>();
+        disbursals = new HashMap<String, BigDecimal>();
     }
 
     protected boolean userDefinedProductValid(String userDefinedProduct, String phoneNumber) throws Exception {
@@ -296,7 +298,7 @@ public class MPesaXlsImporter extends StandardImport {
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
-        if (accounts.isEmpty()) {
+        if (accounts.isEmpty() || (disbursals.get(phoneNumber)!= null && disbursals.get(phoneNumber).compareTo(withdrawnAmount) == 0)) {
             addError(row, String.format("No approved loans found for client with mobile number %s and loan amount %s",
                     phoneNumber, withdrawnAmount.toString()));
             return null;
@@ -413,6 +415,7 @@ public class MPesaXlsImporter extends StandardImport {
                             successfullyParsedRows += 1;
                             pmts.add(result);
                             ReceiptIDList.add(receipt);
+                            disbursals.put(phoneNumber, result.getPaymentAmount());
                         }
                         continue;
                     }
