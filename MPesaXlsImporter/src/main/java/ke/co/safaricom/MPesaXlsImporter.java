@@ -574,7 +574,7 @@ public class MPesaXlsImporter extends StandardImport {
                         }
                     }
 
-                    if (lastInOrderAcc == null) {
+                    if (lastInOrderAcc == null && paidInAmount.compareTo(BigDecimal.ZERO) != 0) {
                         addError(row, "No valid accounts found with this transaction");
                         continue;
                     }
@@ -585,20 +585,23 @@ public class MPesaXlsImporter extends StandardImport {
                     } else {
                         lastInOrderAmount = BigDecimal.ZERO;
                     }
-                    final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
+                    if(lastInOrderAcc != null)
+                    {
+                        final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
-                    final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
+                        final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
                             getUserReferenceDto(), lastInOrderAcc, lastInOrderAmount, paymentDate, getPaymentTypeDto(), "", new LocalDate(), receipt,
                             customerWithPhoneNumber(phoneNumber));
-
-                    if (!isPaymentValid(cumulativePaymentlastAcc, row)) {
-                        continue;
+                        if (!isPaymentValid(cumulativePaymentlastAcc, row)) {
+                            continue;
+                        }
+                        pmts.add(lastInTheOrderAccPayment);
                     }
                     successfullyParsedRows += 1;
+
                     for (AccountPaymentParametersDto loanPayment : loanPaymentList) {
                         pmts.add(loanPayment);
                     }
-                    pmts.add(lastInTheOrderAccPayment);
                     ReceiptIDList.add(receipt);
                 } catch (Exception e) {
                     /* catch row specific exception and continue for other rows */
