@@ -127,7 +127,11 @@ public class MPesaXlsImporter extends StandardImport {
         if (importTransactionOrder == null) {
             final String importTransactionOrderKey = MPesaXlsImporter.class.getCanonicalName() + "."
                     + IMPORT_TRANSACTION_ORDER;
-            importTransactionOrder = (List<String>) getAccountService().getMifosConfiguration(importTransactionOrderKey);
+            Object object = getAccountService().getMifosConfiguration(importTransactionOrderKey);
+            if(object instanceof String)
+                importTransactionOrder = Arrays.asList((String)object);
+            else
+                importTransactionOrder = (List<String>)object;
             if (importTransactionOrder == null) {
                 importTransactionOrder = new ArrayList<String>();
             }
