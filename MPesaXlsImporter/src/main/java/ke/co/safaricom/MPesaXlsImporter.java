@@ -363,6 +363,12 @@ public class MPesaXlsImporter extends StandardImport {
             }
             return false;
         }
+
+        if (cumulativePayment.getPaymentDate().toDateMidnight().compareTo(LocalDate.fromDateFields(new Date()).toDateMidnight()) > 0) {
+            addError(row, "Date of transaction cannot be a future date");
+            return false;
+        }
+
         return true;
     }
 
