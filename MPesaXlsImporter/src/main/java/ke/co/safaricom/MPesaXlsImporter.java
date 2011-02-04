@@ -276,7 +276,8 @@ public class MPesaXlsImporter extends StandardImport {
         for (String productName : productNames) {
             if (getAccountService().existsMoreThanOneLoanAccount(phoneNumber, productName)
                     || getAccountService().existsMoreThanOneSavingsAccount(phoneNumber, productName)) {
-                addError(row, "More than one account matches product code " + productName);
+                addError(row, "More than one account matches product code " + productName +
+                        " for client with mobile number " + phoneNumber);
                 return true;
             }
         }
@@ -465,9 +466,16 @@ public class MPesaXlsImporter extends StandardImport {
 
                     String userDefinedProduct = getUserDefinedProduct(transactionPartyDetails);
                     List<String> parameters;
-                    if (userDefinedProduct != null && !userDefinedProduct.isEmpty()
-                            && userDefinedProductValid(userDefinedProduct, phoneNumber)) {
-                        parameters = Arrays.asList(userDefinedProduct);
+                    if (userDefinedProduct != null && !userDefinedProduct.isEmpty()) {
+                        if (moreThanOneAccountMatchesProductCode(row, phoneNumber, Arrays.asList(userDefinedProduct))) {
+                            continue;
+                        }
+                        if (userDefinedProductValid(userDefinedProduct, phoneNumber)) {
+                            parameters = Arrays.asList(userDefinedProduct);
+                        }
+                        else {
+                            parameters = getConfiguredProducts();
+                        }
                     } else {
                         parameters = getConfiguredProducts();
                     }
