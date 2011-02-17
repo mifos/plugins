@@ -534,8 +534,7 @@ public class MPesaXlsImporter extends StandardImport {
                             }
                         }
 
-                        if (paidInAmount.compareTo(BigDecimal.ZERO) > 0
-                                && loanAccountTotalDueAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        if (paidInAmount.compareTo(BigDecimal.ZERO) > 0) {
                             if (paidInAmount.compareTo(loanAccountTotalDueAmount) > 0) {
                                 loanAccountPaymentAmount = loanAccountTotalDueAmount;
                                 paidInAmount = paidInAmount.subtract(loanAccountTotalDueAmount);
@@ -599,8 +598,7 @@ public class MPesaXlsImporter extends StandardImport {
                     } else {
                         lastInOrderAmount = BigDecimal.ZERO;
                     }
-                    if(lastInOrderAcc != null)
-                    {
+                    if(lastInOrderAcc != null && lastInOrderAmount.compareTo(BigDecimal.ZERO) > 0) {
                         final AccountPaymentParametersDto cumulativePaymentlastAcc = createPaymentParametersDto(lastInOrderAcc,
                             lastInOrderAmount, paymentDate);
                         final AccountPaymentParametersDto lastInTheOrderAccPayment = new AccountPaymentParametersDto(
@@ -753,6 +751,11 @@ public class MPesaXlsImporter extends StandardImport {
             addError(row, "\"Paid in\" field is empty.");
             return false;
         }
+        if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0
+            && BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).compareTo(BigDecimal.ZERO) == 0) {
+            addError(row, "Amount must be greater than 0");
+            return false;
+        }
         if (row.getCell(STATUS) == null) {
             addError(row, "Status field is empty");
             return false;
@@ -798,12 +801,6 @@ public class MPesaXlsImporter extends StandardImport {
                         break;
                 }
             }
-            return false;
-        }
-
-        // Additional MPESA validations (this is equivalent to validations done in UI forms)
-        if (cumulativePayment.getPaymentAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            addError(row, "Amount must be greater than 0");
             return false;
         }
         if (cumulativePayment.getPaymentDate().toDateMidnight().compareTo(LocalDate.fromDateFields(new Date()).toDateMidnight()) > 0) {
