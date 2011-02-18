@@ -328,7 +328,8 @@ public class MPesaXlsImporter extends StandardImport {
             return null;
         }
         final AccountPaymentParametersDto loanAccDisbursementPayment = new AccountPaymentParametersDto(
-                getUserReferenceDto(), accounts.get(0), withdrawnAmount, paymentDate, paymentTypeForLoanDisbursals, "");
+                getUserReferenceDto(), accounts.get(0), withdrawnAmount, paymentDate, paymentTypeForLoanDisbursals, "", new LocalDate(), receipt,
+                customerWithPhoneNumber(phoneNumber));
         loanAccDisbursementPayment.setTransactionType(AccountPaymentParametersDto.TransactionType.LOAN_DISBURSAL);
         if (isLoanDisbursalValid(row, loanAccDisbursementPayment)) {
             return loanAccDisbursementPayment;
