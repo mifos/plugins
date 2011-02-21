@@ -318,12 +318,12 @@ public class MPesaXlsImporter extends StandardImport {
         final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
 
         if (accounts.size() > 1) {
-            addError(row, String.format("More than 1 loan found for client with mobile number %s and loan amount %s",
+            addError(row, String.format("More than 1 loan found for client with mobile number %s and loan 'Withdrawn' amount %s",
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
         if (accounts.isEmpty() || (disbursals.get(phoneNumber)!= null && disbursals.get(phoneNumber).compareTo(withdrawnAmount) == 0)) {
-            addError(row, String.format("No approved loans found for client with mobile number %s and loan amount %s",
+            addError(row, String.format("No approved loans found for client with mobile number %s and loan 'Withdrawn' amount %s",
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
@@ -353,7 +353,7 @@ public class MPesaXlsImporter extends StandardImport {
                         addError(row, "Invalid payment amount");
                         break;
                     case INVALID_LOAN_DISBURSAL_AMOUNT:
-                        addError(row, "The 'Withdrawn' amount must match the full loan amount");
+                        addError(row, "The 'Withdrawn' amount must match the full loan amount minus applied fees");
                         break;
                     case INVALID_LOAN_STATE:
                         addError(row, "Invalid Loan state");
