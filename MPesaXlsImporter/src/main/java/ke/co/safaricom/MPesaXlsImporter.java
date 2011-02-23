@@ -750,14 +750,6 @@ public class MPesaXlsImporter extends StandardImport {
             }
         }
         else { // PAYMENTS
-            if (null == row.getCell(PAID_IN)) {
-                addError(row, "Missing required data (Paid in)");
-                return false;
-            }
-            if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0) {
-                addError(row, "Amount must be greater than 0");
-                return false;
-            }
             if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
                 addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE)
                         + "\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
@@ -765,6 +757,14 @@ public class MPesaXlsImporter extends StandardImport {
             }
             if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
                 addError(row, "Missing required data (Transaction party details)");
+                return false;
+            }
+            if (null == row.getCell(PAID_IN)) {
+                addError(row, "Missing required data (Paid in)");
+                return false;
+            }
+            if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0) {
+                addError(row, "Amount must be greater than 0");
                 return false;
             }
         }
