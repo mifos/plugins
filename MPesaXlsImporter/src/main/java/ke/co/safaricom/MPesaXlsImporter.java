@@ -290,6 +290,7 @@ public class MPesaXlsImporter extends StandardImport {
 
     private boolean isLoanDisbursement(Row row) {
         return DISBURSAL_TRANSACTION_TYPE.equals(cellStringValue(row.getCell(TRANSACTION_TYPE)))
+                && row.getCell(DETAILS) != null
                 && cellStringValue(row.getCell(DETAILS)) != null
                 && cellStringValue(row.getCell(DETAILS)).startsWith(DISBURSAL_DETAILS_PREFIX);
     }
@@ -318,12 +319,12 @@ public class MPesaXlsImporter extends StandardImport {
         final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
 
         if (accounts.size() > 1) {
-            addError(row, String.format("More than 1 loan found for client with mobile number %s and loan 'Withdrawn' amount %s",
+            addError(row, String.format("More than 1 loan found for client with mobile number %s and loan minus disbursement fees amount of %s",
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
         if (accounts.isEmpty() || (disbursals.get(phoneNumber)!= null && disbursals.get(phoneNumber).compareTo(withdrawnAmount) == 0)) {
-            addError(row, String.format("No approved loans found for client with mobile number %s and loan 'Withdrawn' amount %s",
+            addError(row, String.format("No approved loans found for client with mobile number %s and loan minus disbursement fees amount of %s",
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
@@ -719,11 +720,15 @@ public class MPesaXlsImporter extends StandardImport {
             return false;
         }
         if (row.getCell(RECEIPT) == null || row.getCell(RECEIPT).getStringCellValue() == null) {
-            addError(row, "Missing required data");
+            addError(row, "Missing required data (Receipt)");
             return false;
         }
         if (row.getCell(STATUS) == null || row.getCell(STATUS).getStringCellValue() == null) {
-            addError(row, "Missing required data");
+            addError(row, "Missing required data (Status)");
+            return false;
+        }
+        if (row.getCell(OTHER_PARTY_INFO) == null) {
+            addError(row, "Missing required data (Other Party Info)");
             return false;
         }
         if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
@@ -734,27 +739,37 @@ public class MPesaXlsImporter extends StandardImport {
             addError(row, "Missing required data");
             return false;
         }
-        if (!isLoanDisbursement(row) && !row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
-            addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE)
-                    + "\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
-            return false;
+        if (isLoanDisbursement(row)) { // DISBURSALS
+            if (null == row.getCell(WITHDRAWN)) {
+                addError(row, "Missing required data (Withdrawn)");
+                return false;
+            }
+            if(BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).compareTo(BigDecimal.ZERO) == 0) {
+                addError(row, "Amount must be greater than 0");
+                return false;
+            }
         }
-
+        else { // PAYMENTS
+            if (null == row.getCell(PAID_IN)) {
+                addError(row, "Missing required data (Paid in)");
+                return false;
+            }
+            if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0) {
+                addError(row, "Amount must be greater than 0");
+                return false;
+            }
+            if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
+                addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE)
+                        + "\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
+                return false;
+            }
+            if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
+                addError(row, "Missing required data (Transaction party details)");
+                return false;
+            }
+        }
         if (null == row.getCell(TRANSACTION_DATE)) {
             addError(row, "Date field is empty");
-            return false;
-        }
-        if (!isLoanDisbursement(row) && null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
-            addError(row, "\"Transaction party details\" field is empty.");
-            return false;
-        }
-        if (null == row.getCell(PAID_IN)) {
-            addError(row, "\"Paid in\" field is empty.");
-            return false;
-        }
-        if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0
-            && BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).compareTo(BigDecimal.ZERO) == 0) {
-            addError(row, "Amount must be greater than 0");
             return false;
         }
         if (row.getCell(STATUS) == null) {
