@@ -64,7 +64,7 @@ public class MPesaXlsImporter extends StandardImport {
 
     private static final String DIGITS_AFTER_DECIMAL = "AccountingRules.DigitsAfterDecimal";
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
-    private static final String MAX_MPESA_DISBURSLA_LIMIT = "MPESA.DisbursalMax";
+    private static final String MAX_MPESA_DISBURSAL_LIMIT = "MPESA.DisbursalMax";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA";
     protected static final String PAYMENT_TRANSACTION_TYPE = "Pay Utility";
@@ -142,7 +142,10 @@ public class MPesaXlsImporter extends StandardImport {
     @SuppressWarnings("unchecked")
     protected Double getMaxMPESADisbursalLimit() {
         if (maxMPESADisbursalLimit == null) {
-            maxMPESADisbursalLimit = Double.valueOf(getAccountService().getMifosConfiguration(MAX_MPESA_DISBURSLA_LIMIT).toString());
+            Object disbursalLimit = getAccountService().getMifosConfiguration(MAX_MPESA_DISBURSAL_LIMIT);
+            if (disbursalLimit != null) {
+                maxMPESADisbursalLimit = Double.valueOf(disbursalLimit.toString());
+            }
         }
         return maxMPESADisbursalLimit;
     }
