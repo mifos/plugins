@@ -362,6 +362,9 @@ public class MPesaXlsImporter extends StandardImport {
                     case INVALID_LOAN_STATE:
                         addError(row, "Invalid Loan state");
                         break;
+                    case OTHER_ACTIVE_LOANS_FOR_THE_SAME_PRODUCT:
+                        addError(row, "This loan cannot be disbursed because the customer has other active loans for the same product.");
+                        break;
                     default:
                         addError(row, "Invalid data");
                         break;
