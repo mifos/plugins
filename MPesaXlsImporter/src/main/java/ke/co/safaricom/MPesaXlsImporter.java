@@ -755,6 +755,14 @@ public class MPesaXlsImporter extends StandardImport {
                 return false;
             }
         }
+        else if(DISBURSAL_TRANSACTION_TYPE.equals(cellStringValue(row.getCell(TRANSACTION_TYPE)))) {
+            if(row.getCell(DETAILS) == null
+            || cellStringValue(row.getCell(DETAILS)) == null
+            || !cellStringValue(row.getCell(DETAILS)).startsWith(DISBURSAL_DETAILS_PREFIX)) {
+                addError(row, "Field is inappropriate (Details)");
+                return false;
+            }
+        }
         else { // PAYMENTS
             if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
                 addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE)
