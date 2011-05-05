@@ -27,7 +27,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -42,6 +44,9 @@ import org.mifos.dto.domain.ParseResultDto;
 
 public class AudiBankXlsImporter extends AudiBankImporter {
 
+    private static final String LANGUAGECODE = "Localization.LanguageCode";
+    private static final String COUNTRYCODE = "Localization.CountryCode";
+    
     @Override
     public String getDisplayName() {
         return "Audi Bank (Excel 2007)";
@@ -49,6 +54,11 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
     @Override
     public ParseResultDto parse(final InputStream input) {
+        String language = getAccountService().getMifosConfiguration(LANGUAGECODE).toString();
+        String country = getAccountService().getMifosConfiguration(COUNTRYCODE).toString();
+        Locale currentLocale = new Locale(language, country);
+        ResourceBundle messages = ResourceBundle.getBundle("MessagesAudiBank", currentLocale);
+        
         final List<String> errorsList = new ArrayList<String>();
         final List<AccountPaymentParametersDto> pmts = new ArrayList<AccountPaymentParametersDto>();
         int friendlyRowNum = 0;
@@ -60,30 +70,30 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
             Row row = sheet.getRow(0);
             if (null == row) {
-                errorsList.add("Not enough input. Couldn't read first row.");
+                errorsList.add(messages.getString(AudiBankConstants.NOT_ENOUGH_INPOUT_ROW));
             }
 
             final Cell topLeftCell = row.getCell(0);
             if (errorsList.isEmpty() && null == topLeftCell) {
-                errorsList.add("Not enough input. Couldn't read first cell.");
+                errorsList.add(messages.getString(AudiBankConstants.NOT_ENOUGH_INPOUT_CELL));
             }
 
             if (errorsList.isEmpty() && topLeftCell.getCellType() != Cell.CELL_TYPE_STRING) {
-                errorsList.add("First cell must be a string containing a payment type.");
+                errorsList.add(messages.getString(AudiBankConstants.INVALID_CELL_TYPE));
             }
 
             String topLeftCellAsString = "";
             if (errorsList.isEmpty()) {
                 topLeftCellAsString = topLeftCell.getStringCellValue();
                 if (StringUtils.isBlank(topLeftCellAsString)) {
-                    errorsList.add("Payment type not found in first cell.");
+                    errorsList.add(messages.getString(AudiBankConstants.PAYMENT_TYPE_NOT_FOUND));
                 }
             }
 
             if (errorsList.isEmpty()) {
                 setPaymentTypeDto(findPaymentType(topLeftCellAsString));
                 if (getPaymentTypeDto() == null) {
-                    errorsList.add("No payment type found named '" + topLeftCellAsString + "'.");
+                    errorsList.add(messages.getString(AudiBankConstants.NO_PAYMENT_TYPE_FOUND)+" '" + topLeftCellAsString + "'.");
                 }
             }
             row = null;
@@ -92,7 +102,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
             while (errorsList.isEmpty()) {
                 if (!rowIterator.hasNext()) {
-                    errorsList.add("No rows found with import data.");
+                    errorsList.add(messages.getString(AudiBankConstants.NO_ROWS_FOUND_WITH_IMPORT_DATA));
                     break;
                 }
                 row = rowIterator.next();
@@ -122,7 +132,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     }
 
                     if (row.getLastCellNum() < MAX_CELL_NUM) {
-                        errorsList.add("Row " + friendlyRowNum + " is missing data: not enough fields.");
+                        errorsList.add(String.format(messages.getString(AudiBankConstants.NOT_ENOUGH_FIELDS), friendlyRowNum));
                         continue;
                     }
 
@@ -140,7 +150,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         }
                     }
                     if (null == debitOrCredit) {
-                        errorsList.add("Row " + friendlyRowNum + " is missing data: debit/credit not specified.");
+                        errorsList.add(String.format(messages.getString(AudiBankConstants.DEBIT_CREDIT_NOT_SPECIFIED), friendlyRowNum));
                         continue;
                     }
 
@@ -151,7 +161,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     }
 
                     if ("".equals(accountId)) {
-                        errorsList.add("Loan account ID could not be extracted from row " + friendlyRowNum);
+                        errorsList.add(messages.getString(AudiBankConstants.LOAN_ACCOUNT_ID_COULD_NOT_BE_EXTRACTED) + " " + friendlyRowNum);
                         continue;
                     }
 
@@ -164,14 +174,14 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         }
                     }
                     if (null == serial) {
-                        errorsList.add("Serial value in row " + friendlyRowNum + " does not follow expected format.");
+                        errorsList.add(String.format(messages.getString(AudiBankConstants.INVALID_FORMAT_SERIAL), friendlyRowNum));
                         continue;
                     }
 
                     final Cell amountCell = row.getCell(AMOUNT);
                     BigDecimal paymentAmount = null;
                     if (null == amountCell) {
-                        errorsList.add("Invalid amount in row " + friendlyRowNum);
+                        errorsList.add(messages.getString(AudiBankConstants.INVALID_AMOUNT) + " " + friendlyRowNum);
                         continue;
                     } else {
                         // FIXME: possible data loss converting double to BigDecimal?
@@ -189,13 +199,13 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         }
                     } catch (Exception e) {
                         errorsList
-                                .add("Error looking up account ID from row " + friendlyRowNum + ": " + e.getMessage());
+                                .add(messages.getString(AudiBankConstants.INVALID_ACCOUNT_ID) + " " + friendlyRowNum + ": " + e.getMessage());
                         continue;
                     }
 
                     final Cell transDateCell = row.getCell(TRANS_DATE);
                     if (null == transDateCell) {
-                        errorsList.add("No valid transaction date in row " + friendlyRowNum);
+                        errorsList.add(messages.getString(AudiBankConstants.NO_VALID_TRANSACTION_DATE) + " " + friendlyRowNum);
                         continue;
                     }
                     final Date transDate = transDateCell.getDateCellValue();
@@ -215,19 +225,19 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         for (InvalidPaymentReason error : errors) {
                             switch (error) {
                             case INVALID_DATE:
-                                errorsList.add("Invalid transaction date in row " + friendlyRowNum);
+                                errorsList.add(messages.getString(AudiBankConstants.INVALID_TRANSACTION_DATE) + " " + friendlyRowNum);
                                 break;
                             case UNSUPPORTED_PAYMENT_TYPE:
-                                errorsList.add("Unsupported payment type in row " + friendlyRowNum);
+                                errorsList.add(messages.getString(AudiBankConstants.UNSUPPORTED_PAYMENT_TYPE) + " " + friendlyRowNum);
                                 break;
                             case INVALID_PAYMENT_AMOUNT:
-                                errorsList.add("Invalid payment amount in row " + friendlyRowNum);
+                                errorsList.add(messages.getString(AudiBankConstants.INVALID_PAYMENT_AMOUNT) + " " + friendlyRowNum);
                                 break;
                             case INVALID_LOAN_STATE:
-                                errorsList.add("Invalid account state in row " + friendlyRowNum);
+                                errorsList.add(messages.getString(AudiBankConstants.INVALID_LOAN_STATE) + " " + friendlyRowNum);
                                 break;
                             default:
-                                errorsList.add("Invalid payment in row " + friendlyRowNum + " (reason unknown).");
+                                errorsList.add(String.format(messages.getString(AudiBankConstants.INVALID_PAYMENT_REASON_UNKNOWN), friendlyRowNum));
                                 break;
                             }
                         }
@@ -241,7 +251,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
         } catch (Exception e) {
             e.printStackTrace(System.err);
-            errorsList.add(e + ". Input line number: " + friendlyRowNum);
+            errorsList.add(e + "." + messages.getString(AudiBankConstants.INPUT_LINE_NUMBER) + " " + friendlyRowNum);
         }
 
         return new ParseResultDto(errorsList, pmts);

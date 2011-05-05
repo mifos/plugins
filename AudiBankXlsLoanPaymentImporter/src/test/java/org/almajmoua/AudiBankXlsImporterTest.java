@@ -83,6 +83,8 @@ public class AudiBankXlsImporterTest {
         when(accountService.lookupLoanAccountReferenceFromExternalId(anyString())).thenReturn(account);
         when(accountService.lookupLoanAccountReferenceFromGlobalAccountNumber(anyString())).thenReturn(
                 accountFromGlobalAccountNum);
+        when(accountService.getMifosConfiguration("Localization.LanguageCode")).thenReturn("EN");
+        when(accountService.getMifosConfiguration("Localization.CountryCode")).thenReturn("GB");
         when(accountFromGlobalAccountNum.getAccountId()).thenReturn(idFromGlobalAccountNumber);
         when(paymentTypeDto.getName()).thenReturn("Bank Audi sal");
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();

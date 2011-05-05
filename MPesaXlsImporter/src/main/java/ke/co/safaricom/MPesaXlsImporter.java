@@ -35,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.Set;
 import org.apache.commons.io.IOUtils;
 
@@ -65,6 +66,8 @@ public class MPesaXlsImporter extends StandardImport {
     private static final String DIGITS_AFTER_DECIMAL = "AccountingRules.DigitsAfterDecimal";
     private static final String IMPORT_TRANSACTION_ORDER = "ImportTransactionOrder";
     private static final String MAX_MPESA_DISBURSAL_LIMIT = "MPESA.DisbursalMax";
+    private static final String LANGUAGECODE = "Localization.LanguageCode";
+    private static final String COUNTRYCODE = "Localization.CountryCode";
     private static final String EXPECTED_STATUS = "Completed";
     protected static final String PAYMENT_TYPE = "MPESA";
     protected static final String PAYMENT_TRANSACTION_TYPE = "Pay Utility";
@@ -94,6 +97,7 @@ public class MPesaXlsImporter extends StandardImport {
     private Set<Integer> errorRowNums;
     private BigDecimal totalAmountOfErrorRows;
     private PaymentTypeDto paymentTypeForLoanDisbursals;
+    private ResourceBundle messages;
 
     @Override
     public String getDisplayName() {
@@ -102,21 +106,31 @@ public class MPesaXlsImporter extends StandardImport {
 
     @Override
     public Map<String, String> getPropertiesForAdminDisplay() {
+        String language = getAccountService().getMifosConfiguration(LANGUAGECODE).toString();
+        String country = getAccountService().getMifosConfiguration(COUNTRYCODE).toString();
+        Locale currentLocale = new Locale(language, country);
+        
+        messages = ResourceBundle.getBundle("MessagesBundle", currentLocale);
+        
         Map<String, String> properties = new HashMap<String, String>();
         List<String> order = getImportTransactionOrder();
 
+        String key = messages.getString(MPesaConstants.MPESA_TRANSACTION_ORDER);
+        
         if (order == null || order.isEmpty()) {
-            properties.put("MPESA transaction order", "NOT DEFINED");
+            properties.put(key, messages.getString(MPesaConstants.NOT_DEFINED));
         } else {
-            properties.put("MPESA transaction order", StringUtils.join(order, ", "));
+            properties.put(key, StringUtils.join(order, ", "));
         }
 
         Double limit = getMaxMPESADisbursalLimit();
 
+        key = messages.getString("MaxMpesaDisbursalLimit");
+        
         if (limit == null) {
-            properties.put("Max MPESA Disbursal Limit", "NOT DEFINED");
+            properties.put(key, messages.getString(MPesaConstants.NOT_DEFINED));
         } else {
-            properties.put("Max MPESA Disbursal Limit", String.valueOf(limit));
+            properties.put(key, String.valueOf(limit));
         }
 
         return properties;
@@ -159,22 +173,25 @@ public class MPesaXlsImporter extends StandardImport {
     }
 
     private String formatErrorMessage(Row row, String message) {
+        String sRow = messages.getString(MPesaConstants.ROW);
+        String sError = messages.getString(MPesaConstants.ERROR);
+        String serror = messages.getString(MPesaConstants.ERROR_LOWERCASE);
         if (row == null) {
-            return String.format("Error - %s", message);
+            return String.format(sError + " - %s", message);
         }
         if (row.getCell(RECEIPT) == null) {
-            return String.format("Row <%d> error - %s",
+            return String.format(sRow + " <%d> "+ serror +" - %s",
                     row.getRowNum() + 1,
                     message);
         }
-        return String.format("Row <%d> error - %s - %s",
+        return String.format(sRow + " <%d> "+ serror +" - %s - %s",
                 row.getRowNum() + 1,
                 cellStringValue(row.getCell(RECEIPT)),
                 message);
     }
 
     private String formatIgnoredErrorMessage(Row row, String message) {
-        return String.format("Row <%d> ignored - %s - %s",
+        return String.format(messages.getString(MPesaConstants.ROW)+" <%d> "+ messages.getString(MPesaConstants.IGNORED) +" - %s - %s",
                 row.getRowNum() + 1,
                 cellStringValue(row.getCell(RECEIPT)),
                 message);
@@ -222,15 +239,15 @@ public class MPesaXlsImporter extends StandardImport {
     private String validatePhoneNumber(Row row) {
         String phoneNumber = getPhoneNumberCandidate(row);
         if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-            addError(row, "Cannot read client's phone number");
+            addError(row, messages.getString(MPesaConstants.CANNOT_READ_PHONE_NUMBER));
             return null;
         }
         List<CustomerDto> customers = getCustomerSearchService().findCustomersWithGivenPhoneNumber(phoneNumber);
         if (customers == null || customers.isEmpty()) {
-            addError(row, String.format("Client with mobile number %s was not found", phoneNumber));
+            addError(row, String.format(messages.getString(MPesaConstants.CLIENT_NOT_FOUND), phoneNumber));
             return null;
         } else if (customers.size() >= 2) {
-            addError(row, String.format("More than 1 client with mobile number %s was found", phoneNumber));
+            addError(row, String.format(messages.getString(MPesaConstants.TOO_MANY_MATCHES), phoneNumber));
             return null;
         }
         return phoneNumber;
@@ -250,6 +267,11 @@ public class MPesaXlsImporter extends StandardImport {
         totalAmountOfErrorRows = BigDecimal.ZERO;
         ReceiptIDList = new LinkedList<String>();
         disbursals = new HashMap<String, BigDecimal>();
+        String language = getAccountService().getMifosConfiguration(LANGUAGECODE).toString();
+        String country = getAccountService().getMifosConfiguration(COUNTRYCODE).toString();
+        Locale currentLocale = new Locale(language, country);
+        
+        messages = ResourceBundle.getBundle("MessagesBundle", currentLocale);
     }
 
     protected boolean userDefinedProductValid(String userDefinedProduct, String phoneNumber) throws Exception {
@@ -279,8 +301,7 @@ public class MPesaXlsImporter extends StandardImport {
         for (String productName : productNames) {
             if (getAccountService().existsMoreThanOneLoanAccount(phoneNumber, productName)
                     || getAccountService().existsMoreThanOneSavingsAccount(phoneNumber, productName)) {
-                addError(row, "More than one account matches product code " + productName +
-                        " for client with mobile number " + phoneNumber);
+                addError(row, String.format(messages.getString(MPesaConstants.EXIST_MORE_THAN_ONE_ACCOUNT), productName ,phoneNumber));
                 return true;
             }
         }
@@ -311,9 +332,7 @@ public class MPesaXlsImporter extends StandardImport {
                 nonZeroFractionalPart = true;
             }
             if (withdrawnAmount.scale() > 1 || nonZeroFractionalPart) {
-                addError(row, String.format("Number of fraction digits in the "
-                        + "\"Withdrawn\" column - %d - is greater than configured"
-                        + " for the currency - %d", withdrawnAmount.scale(),
+                addError(row, String.format(messages.getString(MPesaConstants.FRACTION_DIGITS_IS_TOO_MUCH_WITHDRAWN), withdrawnAmount.scale(),
                         configuredDigitsAfterDecimal()));
                 return null;
             }
@@ -322,12 +341,12 @@ public class MPesaXlsImporter extends StandardImport {
         final List<AccountReferenceDto> accounts = getAccountService().lookupLoanAccountReferencesFromClientPhoneNumberAndWithdrawAmount(phoneNumber, withdrawnAmount);
 
         if (accounts.size() > 1) {
-            addError(row, String.format("More than 1 loan found for client with mobile number %s and loan minus disbursement fees amount of %s",
+            addError(row, String.format(messages.getString(MPesaConstants.MORE_THAN_1_LOAN_FOUND),
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
         if (accounts.isEmpty() || (disbursals.get(phoneNumber)!= null && disbursals.get(phoneNumber).compareTo(withdrawnAmount) == 0)) {
-            addError(row, String.format("No approved loans found for client with mobile number %s and loan minus disbursement fees amount of %s",
+            addError(row, String.format(messages.getString(MPesaConstants.NO_APPROVED_LOANS_FOUND),
                     phoneNumber, withdrawnAmount.toString()));
             return null;
         }
@@ -348,25 +367,25 @@ public class MPesaXlsImporter extends StandardImport {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
                     case INVALID_DATE:
-                        addError(row, "Invalid transaction date");
+                        addError(row, messages.getString(MPesaConstants.INVALID_DATA));
                         break;
                     case UNSUPPORTED_PAYMENT_TYPE:
-                        addError(row, "Unsupported payment type");
+                        addError(row, messages.getString(MPesaConstants.UNSUPPORTED_PAYMENT_TYPE));
                         break;
                     case INVALID_PAYMENT_AMOUNT:
-                        addError(row, "Invalid payment amount");
+                        addError(row, messages.getString(MPesaConstants.INVALID_PAYMENT_AMOUNT));
                         break;
                     case INVALID_LOAN_DISBURSAL_AMOUNT:
-                        addError(row, "The 'Withdrawn' amount must match the full loan amount minus applied fees");
+                        addError(row, messages.getString(MPesaConstants.INVALID_LOAN_DISBURSAL_AMOUNT));
                         break;
                     case INVALID_LOAN_STATE:
-                        addError(row, "Invalid Loan state");
+                        addError(row, messages.getString(MPesaConstants.INVALID_LOAN_STATE));
                         break;
                     case OTHER_ACTIVE_LOANS_FOR_THE_SAME_PRODUCT:
-                        addError(row, "This loan cannot be disbursed because the customer has other active loans for the same product.");
+                        addError(row, messages.getString(MPesaConstants.OTHER_ACTIVE_LOANS_FOR_THE_SAME_PRODUCT));
                         break;
                     default:
-                        addError(row, "Invalid data");
+                        addError(row, messages.getString(MPesaConstants.INVALID_DATA));
                         break;
                 }
             }
@@ -374,7 +393,7 @@ public class MPesaXlsImporter extends StandardImport {
         }
 
         if (cumulativePayment.getPaymentDate().toDateMidnight().compareTo(LocalDate.fromDateFields(new Date()).toDateMidnight()) > 0) {
-            addError(row, "Date of transaction cannot be a future date");
+            addError(row, messages.getString(MPesaConstants.INVALID_DATE));
             return false;
         }
 
@@ -398,7 +417,7 @@ public class MPesaXlsImporter extends StandardImport {
                     rowIterator = new XSSFWorkbook(copiedInput).getSheetAt(0).iterator();
                 } catch (Exception e2) {
                     e2.printStackTrace();
-                    throw new MPesaXlsImporterException("Unknown file format. Supported file formats are: XLS (from Excel 2003 or older), XLSX");
+                    throw new MPesaXlsImporterException(messages.getString(MPesaConstants.UNKNOW_FILE_FORMAT));
                 }
             }
             int friendlyRowNum = 0;
@@ -427,7 +446,7 @@ public class MPesaXlsImporter extends StandardImport {
                     String receipt = cellStringValue(row.getCell(RECEIPT));
 
                     if (checkDuplicates(row, receipt)) {
-                        addIgnoredMessage(row, "Receipt ID duplicated");
+                        addIgnoredMessage(row, messages.getString(MPesaConstants.RECEIPT_ID_DUPLICATED));
                         continue;
                     }
 
@@ -435,7 +454,7 @@ public class MPesaXlsImporter extends StandardImport {
                     try {
                         transDate = getDate(row.getCell(TRANSACTION_DATE));
                     } catch (Exception e) {
-                        addError(row, "Date does not begin with expected format (YYYY-MM-DD)");
+                        addError(row, messages.getString(MPesaConstants.INVALID_FORMAT_DATE));
                         continue;
                     }
 
@@ -466,7 +485,7 @@ public class MPesaXlsImporter extends StandardImport {
                         if (transactionPartyDetails.endsWith(".0")) {
                             transactionPartyDetails = transactionPartyDetails.replace(".0", "");
                         } else {
-                            throw new IllegalArgumentException("Unknown format of cell " + TRANSACTION_PARTY_DETAILS);
+                            throw new IllegalArgumentException(messages.getString(MPesaConstants.UNKNOWN_FORMAT_OF_CELL) + " " + TRANSACTION_PARTY_DETAILS);
                         }
                     } else if (row.getCell(TRANSACTION_PARTY_DETAILS).getCellType() == Cell.CELL_TYPE_STRING) {
                         transactionPartyDetails = row.getCell(TRANSACTION_PARTY_DETAILS).getStringCellValue();
@@ -496,7 +515,7 @@ public class MPesaXlsImporter extends StandardImport {
                     String lastInTheOrderProdSName = parameters.get(parameters.size() - 1);
                     loanPrds.addAll(parameters.subList(0, parameters.size() - 1));
 
-                    checkBlank(lastInTheOrderProdSName, "Savings product short name", row);
+                    checkBlank(lastInTheOrderProdSName, messages.getString(MPesaConstants.SAVINGS_PRODUCT_SHORT_NAME), row);
 
                     BigDecimal paidInAmount = BigDecimal.ZERO;
 
@@ -512,7 +531,7 @@ public class MPesaXlsImporter extends StandardImport {
                         }
                         if (paidInAmount.scale() > 1 || nonZeroFractionalPart) {
                             addError(row,
-                                    String.format("Number of fraction digits in the \"Paid In\" column - %d - is greater than configured for the currency - %d",
+                                    String.format(messages.getString(MPesaConstants.FRACTION_DIGITS_IS_TOO_MUCH_PAID_IN),
                                     paidInAmount.scale(), configuredDigitsAfterDecimal()));
                             continue;
                         }
@@ -589,14 +608,14 @@ public class MPesaXlsImporter extends StandardImport {
                                 }
                             }
                             if (paidInAmount.compareTo(totalPaymentDueAmount) > 0) {
-                                addError(row, "Last account is a loan account but the total paid in amount is greater than the total due amount");
+                                addError(row, messages.getString(MPesaConstants.TOTAL_PAID_IN_AMOUNT_IS_GREATER_THAN_THE_TOTAL_DUE_AMOUNT));
                                 continue;
                             }
                         }
                     }
 
                     if (lastInOrderAcc == null && paidInAmount.compareTo(BigDecimal.ZERO) != 0) {
-                        addError(row, "No valid accounts found with this transaction");
+                        addError(row, messages.getString(MPesaConstants.NO_VALID_ACCOUNTS_FOUND));
                         continue;
                     }
 
@@ -633,7 +652,7 @@ public class MPesaXlsImporter extends StandardImport {
         } catch (Exception e) {
             /* Catch any exception in the process */
             e.printStackTrace();
-            errorsList.add(e.getMessage() + ". Got error before reading rows");
+            errorsList.add(e.getMessage() + ". " + messages.getString(MPesaConstants.GOT_ERROR_BEFORE_READING_ROWS));
 
         }
         return parsingResult();
@@ -646,7 +665,7 @@ public class MPesaXlsImporter extends StandardImport {
         result.setNumberOfReadRows(result.getNumberOfErrorRows() + result.getNumberOfIgnoredRows()
                 + successfullyParsedRows);
         if (result.getNumberOfReadRows() == 0) {
-            errorsList.add("No rows found with import data");
+            errorsList.add(messages.getString(MPesaConstants.NO_ROWS_FOUND_WITH_IMPORT_DATA));
         }
         result.setTotalAmountOfTransactionsWithError(totalAmountOfErrorRows);
         result.setTotalAmountOfDisbursementsImported(sumAmountsOfDisbursements());
@@ -688,7 +707,7 @@ public class MPesaXlsImporter extends StandardImport {
     protected List<String> getConfiguredProducts() {
         List<String> products = getImportTransactionOrder();
         if (products == null || products.isEmpty()) {
-            throw new MPesaXlsImporterException("No valid product name in \"Transaction Party Details\" field and ImportTransactionOrder property is not set");
+            throw new MPesaXlsImporterException(messages.getString(MPesaConstants.NO_VALID_PRODUCT_NAME));
         }
         return products;
     }
@@ -708,50 +727,48 @@ public class MPesaXlsImporter extends StandardImport {
         final PaymentTypeDto paymentType = findPaymentType(PAYMENT_TYPE);
 
         if (paymentType == null) {
-            throw new MPesaXlsImporterException("Payment type " + PAYMENT_TYPE + " not found. Have you configured"
-                    + " this payment type?");
+            throw new MPesaXlsImporterException(String.format(messages.getString(MPesaConstants.PAYMENT_TYPE_NOT_FOUND),PAYMENT_TYPE));
         }
         setPaymentTypeDto(paymentType);
 
         paymentTypeForLoanDisbursals = findDisbursementType(PAYMENT_TYPE);
         if (paymentTypeForLoanDisbursals == null) {
-            throw new MPesaXlsImporterException("Disbursement type " + PAYMENT_TYPE
-                    + " not found. Have you configured" + " this disbursement type?");
+            throw new MPesaXlsImporterException(String.format(messages.getString(MPesaConstants.DISBURSMENT_TYPE_NOT_FOUND),PAYMENT_TYPE));
         }
     }
 
     private boolean isRowValid(final Row row, final int friendlyRowNum, List<String> errorsList) throws Exception {
         if (row.getLastCellNum() < MAX_CELL_NUM) {
-            addError(row, "Missing required data");
+            addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA));
             return false;
         }
         if (row.getCell(RECEIPT) == null || row.getCell(RECEIPT).getStringCellValue() == null) {
-            addError(row, "Missing required data (Receipt)");
+            addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA_RECEIPT));
             return false;
         }
         if (row.getCell(STATUS) == null || row.getCell(STATUS).getStringCellValue() == null) {
-            addError(row, "Missing required data (Status)");
+            addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA_STATUS));
             return false;
         }
         if (row.getCell(OTHER_PARTY_INFO) == null) {
-            addError(row, "Missing required data (Other Party Info)");
+            addError(row, messages.getString(MPesaConstants.OTHER_ACTIVE_LOANS_FOR_THE_SAME_PRODUCT));
             return false;
         }
         if (!row.getCell(STATUS).getStringCellValue().trim().equals(EXPECTED_STATUS)) {
-            addIgnoredMessage(row, "Status of " + row.getCell(STATUS) + " instead of Completed");
+            addIgnoredMessage(row, String.format(messages.getString(MPesaConstants.INVALID_STATUS), row.getCell(STATUS)));
             return false;
         }
         if (row.getCell(TRANSACTION_TYPE) == null || row.getCell(TRANSACTION_TYPE).getStringCellValue() == null) {
-            addError(row, "Missing required data");
+            addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA));
             return false;
         }
         if (isLoanDisbursement(row)) { // DISBURSALS
             if (null == row.getCell(WITHDRAWN)) {
-                addError(row, "Missing required data (Withdrawn)");
+                addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA_WITHDRAWN));
                 return false;
             }
             if(BigDecimal.valueOf(row.getCell(WITHDRAWN).getNumericCellValue()).compareTo(BigDecimal.ZERO) == 0) {
-                addError(row, "Amount must be greater than 0");
+                addError(row, messages.getString(MPesaConstants.AMOUNT_MUST_BE_GREATER_THAN_0));
                 return false;
             }
         }
@@ -759,41 +776,40 @@ public class MPesaXlsImporter extends StandardImport {
             if(row.getCell(DETAILS) == null
             || cellStringValue(row.getCell(DETAILS)) == null
             || !cellStringValue(row.getCell(DETAILS)).startsWith(DISBURSAL_DETAILS_PREFIX)) {
-                addError(row, "Field is inappropriate (Details)");
+                addError(row, messages.getString(MPesaConstants.FIELD_IS_INAPPROPRIATE_DETAILS));
                 return false;
             }
         }
         else { // PAYMENTS
             if (!row.getCell(TRANSACTION_TYPE).getStringCellValue().trim().equalsIgnoreCase(PAYMENT_TRANSACTION_TYPE)) {
-                addIgnoredMessage(row, "Transaction type \"" + row.getCell(TRANSACTION_TYPE)
-                        + "\" instead of \"" + PAYMENT_TRANSACTION_TYPE + "\"");
+                addIgnoredMessage(row, String.format(messages.getString(MPesaConstants.INVALID_TRANSACTION_TYPE), row.getCell(TRANSACTION_TYPE),PAYMENT_TRANSACTION_TYPE));
                 return false;
             }
             if (null == row.getCell(TRANSACTION_PARTY_DETAILS)) {
-                addError(row, "Missing required data (Transaction party details)");
+                addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA_TRANSACTION_PARTY_DETAILS));
                 return false;
             }
             if (null == row.getCell(PAID_IN)) {
-                addError(row, "Missing required data (Paid in)");
+                addError(row, messages.getString(MPesaConstants.MISSING_REQUIRED_DATA_PAID_IN));
                 return false;
             }
             if(BigDecimal.valueOf(row.getCell(PAID_IN).getNumericCellValue()).compareTo(BigDecimal.ZERO) <= 0) {
-                addError(row, "Amount must be greater than 0");
+                addError(row, messages.getString(MPesaConstants.AMOUNT_MUST_BE_GREATER_THAN_0));
                 return false;
             }
         }
         if (null == row.getCell(TRANSACTION_DATE)) {
-            addError(row, "Date field is empty");
+            addError(row, messages.getString(MPesaConstants.DATE_FIELD_IS_EMPTY));
             return false;
         }
         if (row.getCell(STATUS) == null) {
-            addError(row, "Status field is empty");
+            addError(row, messages.getString(MPesaConstants.STATUS_FIELD_IS_EMPTY));
             return false;
         } else {
             String receiptNumber = cellStringValue(row.getCell(RECEIPT));
             if (receiptNumber != null && !receiptNumber.isEmpty()) {
                 if (getAccountService().receiptExists(receiptNumber)) {
-                    addError(row, "Transactions with same Receipt ID have already been imported");
+                    addError(row, messages.getString(MPesaConstants.INVALID_RECEIPT));
                     return false;
                 }
             }
@@ -803,7 +819,7 @@ public class MPesaXlsImporter extends StandardImport {
 
     private void checkBlank(final String value, final String name, final Row row) {
         if (StringUtils.isBlank(value)) {
-            addError(row, name + " could not be extracted");
+            addError(row, name + " " + messages.getString(MPesaConstants.COULD_NOT_BE_EXTRACTED));
         }
     }
 
@@ -815,26 +831,26 @@ public class MPesaXlsImporter extends StandardImport {
             for (InvalidPaymentReason error : errors) {
                 switch (error) {
                     case INVALID_DATE:
-                        addError(row, "Invalid transaction date");
+                        addError(row, messages.getString(MPesaConstants.INVALID_DATA));
                         break;
                     case UNSUPPORTED_PAYMENT_TYPE:
-                        addError(row, "Unsupported payment type");
+                        addError(row, messages.getString(MPesaConstants.UNSUPPORTED_PAYMENT_TYPE));
                         break;
                     case INVALID_PAYMENT_AMOUNT:
-                        addError(row, "Invalid payment amount");
+                        addError(row, messages.getString(MPesaConstants.INVALID_PAYMENT_AMOUNT));
                         break;
                     case INVALID_LOAN_STATE:
-                        addError(row, "Invalid account state");
+                        addError(row, messages.getString(MPesaConstants.INVALID_LOAN_STATE));
                         break;
                     default:
-                        addError(row, "Invalid payment (reason unknown)");
+                        addError(row, messages.getString(MPesaConstants.INVALID_PAYMENT_REASON_UNKNOWN));
                         break;
                 }
             }
             return false;
         }
         if (cumulativePayment.getPaymentDate().toDateMidnight().compareTo(LocalDate.fromDateFields(new Date()).toDateMidnight()) > 0) {
-            addError(row, "Date of transaction cannot be a future date");
+            addError(row, messages.getString(MPesaConstants.INVALID_DATE));
             return false;
         }
 
@@ -851,7 +867,7 @@ public class MPesaXlsImporter extends StandardImport {
         try {
             account = getAccountService().lookupSavingsAccountReferenceFromClientPhoneNumberAndSavingsProductShortName(phoneNumber, savingsProductShortName);
         } catch (Exception e) {
-            if (!e.getMessage().equals("savings not found for client phone number " + phoneNumber + " and savings product short name " + savingsProductShortName)) {
+            if (!e.getMessage().equals(String.format(messages.getString(MPesaConstants.SAVINGS_NOT_FOUND), phoneNumber, savingsProductShortName))) {
                 throw e;
             }
         }
@@ -863,7 +879,7 @@ public class MPesaXlsImporter extends StandardImport {
         try {
             account = getAccountService().lookupLoanAccountReferenceFromClientPhoneNumberAndLoanProductShortName(phoneNumber, loanProductShortName);
         } catch (Exception e) {
-            if (!e.getMessage().equals("loan not found for client phone number " + phoneNumber + " and loan product short name " + loanProductShortName)) {
+            if (!e.getMessage().equals(String.format(messages.getString(MPesaConstants.LOAN_NOT_FOUND), phoneNumber, loanProductShortName))) {
                 throw e;
             }
         }
@@ -874,7 +890,7 @@ public class MPesaXlsImporter extends StandardImport {
         boolean skippingRowsBeforeTransactionData = true;
         while (errorsList.isEmpty() && skippingRowsBeforeTransactionData) {
             if (!rowIterator.hasNext()) {
-                errorsList.add("No rows found with import data.");
+                errorsList.add(messages.getString(MPesaConstants.NO_ROWS_FOUND_WITH_IMPORT_DATA));
                 break;
             }
             final Row row = rowIterator.next();
