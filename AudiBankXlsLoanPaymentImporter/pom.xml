@@ -62,6 +62,25 @@
                     </execution>
                 </executions>
             </plugin>
+            
+            <plugin>
+                <groupId>org.mifos.maven</groupId>
+                <artifactId>mifos-pseudoloc-gen</artifactId>
+                <version>1.0</version>
+                <configuration>
+                    <inputDirectory>src/main/resources</inputDirectory>
+                    <outputDirectory>target/classes</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>pseudolocalize</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
         </plugins>
     </build>
 
