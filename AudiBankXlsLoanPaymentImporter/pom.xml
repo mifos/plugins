@@ -3,7 +3,7 @@
     <groupId>org.almajmoua</groupId>
     <artifactId>audibank-xls-importer</artifactId>
     <name>Audi Bank Import Plugin (XLS)</name>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
 
     <parent>
         <groupId>org.mifos</groupId>

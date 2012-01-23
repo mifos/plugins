@@ -220,6 +220,8 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     AccountPaymentParametersDto payment = new AccountPaymentParametersDto(getUserReferenceDto(),
                             account, paymentAmount, paymentDate, getPaymentTypeDto(), "serial=" + serial);
 
+                    payment.addPaymentOption(AccountPaymentParametersDto.PaymentOptions.ALLOW_OVERPAYMENTS);
+                    cumulativePayment.addPaymentOption(AccountPaymentParametersDto.PaymentOptions.ALLOW_OVERPAYMENTS);
                     List<InvalidPaymentReason> errors = getAccountService().validatePayment(cumulativePayment);
                     if (!errors.isEmpty()) {
                         for (InvalidPaymentReason error : errors) {
