@@ -168,9 +168,10 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     final Cell serialCell = row.getCell(SERIAL);
                     String serial = null;
                     if (null != serialCell) {
-                        Double serialNumericValue = serialCell.getNumericCellValue();
+                        serialCell.setCellType(1);
+                        String serialNumericValue = serialCell.getStringCellValue();
                         if (null != serialNumericValue) {
-                            serial = "" + serialNumericValue.intValue();
+                            serial = "" + serialNumericValue;
                         }
                     }
                     if (null == serial) {
@@ -215,10 +216,10 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
                     AccountPaymentParametersDto cumulativePayment = new AccountPaymentParametersDto(
                             getUserReferenceDto(), account, totalPaymentAmountForAccount, paymentDate,
-                            getPaymentTypeDto(), "serial=" + serial);
+                            getPaymentTypeDto(), "serial=" + serial, serial);
 
                     AccountPaymentParametersDto payment = new AccountPaymentParametersDto(getUserReferenceDto(),
-                            account, paymentAmount, paymentDate, getPaymentTypeDto(), "serial=" + serial);
+                            account, paymentAmount, paymentDate, getPaymentTypeDto(), "serial=" + serial, serial);
 
                     payment.addPaymentOption(AccountPaymentParametersDto.PaymentOptions.ALLOW_OVERPAYMENTS);
                     cumulativePayment.addPaymentOption(AccountPaymentParametersDto.PaymentOptions.ALLOW_OVERPAYMENTS);
