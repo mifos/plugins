@@ -259,4 +259,10 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
         return new ParseResultDto(errorsList, pmts);
     }
+
+    @Override
+    public void store(InputStream input) throws Exception {
+        // TODO Auto-generated method stub
+        
+    }
 }

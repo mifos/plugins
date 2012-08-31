@@ -23,11 +23,13 @@ package org.example;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
 import org.mifos.accounts.api.TransactionImport;
 import org.mifos.accounts.api.AccountService;
+import org.mifos.dto.domain.AccountTrxDto;
 import org.mifos.dto.domain.ParseResultDto;
 import org.mifos.dto.domain.AccountPaymentParametersDto;
 import org.mifos.dto.domain.UserReferenceDto;
@@ -72,5 +74,14 @@ public class GroovyPluginRunner extends TransactionImport {
     @Override
     public AccountService getAccountService() {
         return super.getAccountService();
+    }
+
+    /**
+     * method used by StandardImport 
+     * */
+    @Override
+    public List<AccountTrxDto> storeForUndoImport(InputStream input) throws Exception {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

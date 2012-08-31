@@ -26,10 +26,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import org.mifos.accounts.api.TransactionImport;
 import org.mifos.dto.domain.AccountPaymentParametersDto;
-import org.mifos.dto.domain.PaymentTypeDto;
 import org.mifos.dto.domain.AccountReferenceDto;
+import org.mifos.dto.domain.AccountTrxDto;
+import org.mifos.dto.domain.PaymentTypeDto;
 
 
 public abstract class StandardImport extends TransactionImport {
@@ -102,6 +104,28 @@ public abstract class StandardImport extends TransactionImport {
         if (!disbursals.isEmpty()) {
             getAccountService().disburseLoans(disbursals, Locale.ENGLISH);
         }
+    }
+    
+    @Override
+    public List<AccountTrxDto> storeForUndoImport(InputStream input) throws Exception {
+        List<AccountPaymentParametersDto> payments = new ArrayList<AccountPaymentParametersDto>();
+        List<AccountPaymentParametersDto> disbursals = new ArrayList<AccountPaymentParametersDto>();
+        List<AccountPaymentParametersDto> parsedPayments = parse(input).getSuccessfullyParsedPayments();
+        for (AccountPaymentParametersDto payment : parsedPayments) {
+            if (payment.getTransactionType().equals(AccountPaymentParametersDto.TransactionType.LOAN_DISBURSAL)) {
+                disbursals.add(payment);
+            } else {
+                payments.add(payment);
+            }
+        }
+        List<AccountTrxDto> trxIds = new ArrayList<AccountTrxDto>();
+        if (!payments.isEmpty()) {
+            trxIds = getAccountService().makePaymentsForImport(payments);
+        }
+        if (!disbursals.isEmpty()) {
+            getAccountService().disburseLoans(disbursals, Locale.ENGLISH);
+        }
+        return trxIds;
     }
 
     @Override
