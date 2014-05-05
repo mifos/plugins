@@ -187,6 +187,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                     } else {
                         // FIXME: possible data loss converting double to BigDecimal?
                         paymentAmount = new BigDecimal(amountCell.getNumericCellValue());
+                        paymentAmount = BigDecimal.valueOf(amountCell.getNumericCellValue());
                     }
                     final AccountReferenceDto account;
 
