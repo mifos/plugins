@@ -186,8 +186,14 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         continue;
                     } else {
                         // FIXME: possible data loss converting double to BigDecimal?
-                        paymentAmount = new BigDecimal(amountCell.getNumericCellValue());
+                        paymentAmount = BigDecimal.valueOf(amountCell.getNumericCellValue());
+                        int acceptableScale = Integer.parseInt(getAccountService().getMifosConfiguration("AccountingRules.DigitsAfterDecimal").toString());
+                        if (paymentAmount.scale() > acceptableScale){
+                            errorsList.add(messages.getString(AudiBankConstants.INVALID_NUMBER_OF_DECIMALS) + " " + friendlyRowNum);
+                            continue;
+                        }
                     }
+
                     final AccountReferenceDto account;
 
                     try {

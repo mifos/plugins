@@ -41,4 +41,5 @@ public interface AudiBankConstants {
     String INVALID_LOAN_STATE = "InvalidLoanState";
     String INVALID_PAYMENT_REASON_UNKNOWN = "InvalidPaymentReasonUnknown";
     String INPUT_LINE_NUMBER = "InputLineNumber";
+    String INVALID_NUMBER_OF_DECIMALS = "InvalidNumberOfDecimals";
 }

@@ -85,6 +85,7 @@ public class AudiBankXlsImporterTest {
                 accountFromGlobalAccountNum);
         when(accountService.getMifosConfiguration("Localization.LanguageCode")).thenReturn("EN");
         when(accountService.getMifosConfiguration("Localization.CountryCode")).thenReturn("GB");
+        when(accountService.getMifosConfiguration("AccountingRules.DigitsAfterDecimal")).thenReturn("2");
         when(accountFromGlobalAccountNum.getAccountId()).thenReturn(idFromGlobalAccountNumber);
         when(paymentTypeDto.getName()).thenReturn("Bank Audi sal");
         List<PaymentTypeDto> paymentTypeList = new ArrayList<PaymentTypeDto>();
@@ -126,5 +127,12 @@ public class AudiBankXlsImporterTest {
         ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(1));
         assertThat(result.getParseErrors().toString(), result.getParseErrors().get(0), containsString("Serial value"));
+    }
+    @Test
+    public void invalidNumberOfDecimals() throws Exception {
+        String testDataFilename = this.getClass().getResource("/invalid_number_of_decimals.xls").getFile();
+        ParseResultDto result = transactionImport.parse(new FileInputStream(testDataFilename));
+        assertThat(result.getParseErrors().toString(), result.getParseErrors().size(), is(1));
+        assertThat(result.getParseErrors().toString(), result.getParseErrors().get(0), containsString("Invalid number of decimal in amount in row"));
     }
 }
