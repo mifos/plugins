@@ -210,6 +210,11 @@ public class AudiBankXlsImporter extends AudiBankImporter {
                         continue;
                     }
 
+                    if (getAccountService().isAccountGroupLoanMember(account.getAccountId())){
+                        errorsList.add(String.format(messages.getString(AudiBankConstants.ACCOUNT_IS_GROUP_LOAN_ACCOUNT_MEMBER), friendlyRowNum));
+                        continue;
+                    }
+
                     final Cell transDateCell = row.getCell(TRANS_DATE);
                     if (null == transDateCell) {
                         errorsList.add(messages.getString(AudiBankConstants.NO_VALID_TRANSACTION_DATE) + " " + friendlyRowNum);
