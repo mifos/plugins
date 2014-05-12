@@ -56,6 +56,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
     public ParseResultDto parse(final InputStream input) {
         String language = getAccountService().getMifosConfiguration(LANGUAGECODE).toString();
         String country = getAccountService().getMifosConfiguration(COUNTRYCODE).toString();
+        int numberOfOverpayments = 0;
         Locale currentLocale = new Locale(language, country);
         ResourceBundle messages = ResourceBundle.getBundle("MessagesAudiBank", currentLocale);
         
@@ -258,6 +259,9 @@ public class AudiBankXlsImporter extends AudiBankImporter {
 
                         continue;
                     }
+                    if (getAccountService().doesTransactionIntroduceOverpayment(cumulativePayment)){
+                        numberOfOverpayments++;
+                    }
 
                     pmts.add(payment);
                 }
@@ -268,7 +272,7 @@ public class AudiBankXlsImporter extends AudiBankImporter {
             errorsList.add(e + "." + messages.getString(AudiBankConstants.INPUT_LINE_NUMBER) + " " + friendlyRowNum);
         }
 
-        return new ParseResultDto(errorsList, pmts);
+        return new ParseResultDto(errorsList, pmts, numberOfOverpayments);
     }
 
     @Override
